@@ -5,7 +5,8 @@ from djpb.registry import MODEL_TO_PROTO_CLS
 
 def django_to_proto(django_obj, proto_obj=None):
     if proto_obj is None:
-        proto_cls = MODEL_TO_PROTO_CLS[django_obj]
+        django_cls = type(django_obj)
+        proto_cls = MODEL_TO_PROTO_CLS[django_cls]
         proto_obj = proto_cls()
 
     django_model_name = django_obj.__class__.__qualname__
