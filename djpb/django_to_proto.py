@@ -1,3 +1,5 @@
+from django.db import models
+
 from djpb.serializer import SERIALIZERS, DEFAULT_SERIALIZER
 from djpb.util import create_django_field_map, get_django_field_type
 from djpb.registry import MODEL_TO_PROTO_CLS
@@ -9,16 +11,16 @@ def django_to_proto(django_obj, proto_obj=None):
         proto_cls = MODEL_TO_PROTO_CLS[django_cls]
         proto_obj = proto_cls()
 
-    django_model_name = django_obj.__class__.__qualname__
+    django_model = django_obj.__class__
     field_map = create_django_field_map(django_obj)
 
     for proto_field in proto_obj.DESCRIPTOR.fields:
-        attr = proto_field.name
+        field_name = proto_field.name
         is_wrapper_type = proto_field.message_type is not None
-        django_field_type = get_django_field_type(field_map, attr, django_model_name)
+        django_field_type = get_django_field_type(django_model, field_map, field_name)
 
         try:
-            value = getattr(django_obj, attr)
+            value = getattr(django_obj, field_name)
         except django_obj.ObjectDoesNotExist:
             if is_wrapper_type:
                 # leave this field "unset"
@@ -30,12 +32,12 @@ def django_to_proto(django_obj, proto_obj=None):
                 # leave this field "unset"
                 continue
             raise ValueError(
-                f"Can't serialize a None-type value for {django_field_type} {attr!r} "
-                f"of Django model {django_model_name!r}."
+                f"Can't serialize a None-type value for {django_field_type} {field_name!r} "
+                f"of Django model {django_model.__qualname__!r}."
             )
 
         serializer = SERIALIZERS.get(django_field_type, DEFAULT_SERIALIZER)
-        serializer.update_proto(proto_obj, attr, value)
+        serializer.update_proto(proto_obj, field_name, value)
 
     return proto_obj
 

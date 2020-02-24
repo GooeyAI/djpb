@@ -9,21 +9,26 @@ def proto_to_django(proto_obj, django_obj=None):
         django_cls = PROTO_CLS_TO_MODEL[proto_cls]
         django_obj = django_cls()
 
-    django_model_name = django_obj.__class__.__qualname__
+    django_model = django_obj.__class__
     field_map = create_django_field_map(django_obj)
 
-    for pb_field in proto_obj.DESCRIPTOR.fields:
-        attr = pb_field.name
+    for proto_field in proto_obj.DESCRIPTOR.fields:
+        field_name = proto_field.name
 
-        if not proto_obj.HasField(attr):
-            # leave "unset" fields as-is
-            continue
+        try:
+            if not proto_obj.HasField(field_name):
+                # leave "unset" fields as-is
+                continue
+        except ValueError:
+            pass
 
-        django_field_type = get_django_field_type(field_map, attr, django_model_name)
-        value = getattr(proto_obj, attr)
+        django_field_type = get_django_field_type(django_model, field_map, field_name)
+        value = getattr(proto_obj, field_name)
+
+        # print(field_name, django_field_type)
 
         serializer = SERIALIZERS.get(django_field_type, DEFAULT_SERIALIZER)
-        serializer.update_proto(proto_obj, attr, value)
+        serializer.update_django(django_obj, field_name, value)
 
     return django_obj
 
