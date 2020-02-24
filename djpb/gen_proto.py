@@ -122,12 +122,11 @@ def _resolve_proto_type(field_name, field, model, proto_models):
         try:
             related_model = field.related_model
         except AttributeError:
-            related_model = field.rel.model
+            related_model = field.field.model
 
         _gen_proto_for_model(related_model, proto_models)
 
         proto_type = related_model.__name__
-
         if field_type in RELATED_FIELD_TYPES_MANY:
             proto_type = f"repeated {proto_type}"
 
