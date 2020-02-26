@@ -1,5 +1,5 @@
 from djpb.django_to_proto import SERIALIZERS, DEFAULT_SERIALIZER
-from djpb.registry import PROTO_CLS_TO_MODEL
+from djpb.registry import PROTO_CLS_TO_MODEL, MODEL_TO_PROTO_CLS
 from djpb.util import create_django_field_map, get_django_field_type
 
 
@@ -33,7 +33,9 @@ def proto_to_django(proto_obj, django_obj=None):
     return django_obj
 
 
-def proto_bytes_to_django(proto_bytes: bytes, proto_obj, django_obj=None):
-    proto_obj = proto_obj.MergeFromString(proto_bytes)
+def proto_bytes_to_django(proto_bytes: bytes, django_model, django_obj=None):
+    proto_cls = MODEL_TO_PROTO_CLS[django_model]
+    proto_obj = proto_cls()
+    proto_obj.MergeFromString(proto_bytes)
     django_obj = proto_to_django(proto_obj, django_obj)
     return django_obj

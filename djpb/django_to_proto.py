@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 from djpb.serializer import SERIALIZERS, DEFAULT_SERIALIZER
@@ -21,7 +22,7 @@ def django_to_proto(django_obj, proto_obj=None):
 
         try:
             value = getattr(django_obj, field_name)
-        except django_obj.ObjectDoesNotExist:
+        except ObjectDoesNotExist:
             if is_wrapper_type:
                 # leave this field "unset"
                 continue
