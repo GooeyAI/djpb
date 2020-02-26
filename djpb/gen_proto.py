@@ -20,9 +20,9 @@ DJANGO_TO_PROTO_FIELD_TYPE = {
     models.TextField: "string",
     models.CharField: "string",
     models.UUIDField: "string",
+    JSONField: "string",
     models.IntegerField: "int32",
     models.BooleanField: "bool",
-    JSONField: PROTO_STRUCT,
     models.DateTimeField: PROTO_TIMESTAMP,
 }
 

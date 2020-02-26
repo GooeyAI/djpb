@@ -1,9 +1,8 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import models
 
+from djpb.registry import MODEL_TO_PROTO_CLS
 from djpb.serializer import SERIALIZERS, DEFAULT_SERIALIZER
 from djpb.util import create_django_field_map, get_django_field_type
-from djpb.registry import MODEL_TO_PROTO_CLS
 
 
 def django_to_proto(django_obj, proto_obj=None):

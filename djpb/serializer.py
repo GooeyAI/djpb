@@ -1,3 +1,4 @@
+import json
 import typing as T
 import uuid
 
@@ -67,14 +68,11 @@ class JSONFieldSerializer(FieldSerializer):
     field_types = (JSONField,)
 
     def update_proto(self, proto_obj, field_name, value):
-        struct = Struct()
-        struct.update(value)
-
-        field = getattr(proto_obj, field_name)
-        field.CopyFrom(struct)
+        value = json.dumps(value)
+        super().update_proto(proto_obj, field_name, value)
 
     def update_django(self, django_obj, field_name, value):
-        value = dict(value)
+        value = json.loads(value)
         super().update_django(django_obj, field_name, value)
 
 
