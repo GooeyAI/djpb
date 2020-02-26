@@ -5,7 +5,9 @@ import uuid
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
-from google.protobuf.struct_pb2 import Struct
+from google.protobuf.any_pb2 import Any
+from google.protobuf.json_format import MessageToDict, ParseDict
+from google.protobuf.struct_pb2 import Value, Struct
 
 
 class FieldSerializer:
@@ -68,11 +70,12 @@ class JSONFieldSerializer(FieldSerializer):
     field_types = (JSONField,)
 
     def update_proto(self, proto_obj, field_name, value):
-        value = json.dumps(value)
-        super().update_proto(proto_obj, field_name, value)
+        value = ParseDict(value, Value())
+        field = getattr(proto_obj, field_name)
+        field.CopyFrom(value)
 
     def update_django(self, django_obj, field_name, value):
-        value = json.loads(value)
+        value = MessageToDict(value)
         super().update_django(django_obj, field_name, value)
 
 
@@ -91,7 +94,6 @@ class ForwardSingleSerializer(FieldSerializer):
         from djpb import proto_to_django
 
         value = proto_to_django(value)
-
         super().update_django(django_obj, field_name, value)
 
 

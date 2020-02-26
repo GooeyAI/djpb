@@ -9,20 +9,26 @@ from django.db.models.fields.related_descriptors import (
     ReverseOneToOneDescriptor,
 )
 
-PROTO_TIMESTAMP_IMPORT = "google/protobuf/timestamp.proto"
 PROTO_TIMESTAMP = "google.protobuf.Timestamp"
-
-PROTO_STRUCT_IMPORT = "google/protobuf/struct.proto"
 PROTO_STRUCT = "google.protobuf.Struct"
+PROTO_ANY = "google.protobuf.Any"
+PROTO_VALUE = "google.protobuf.Value"
+
+PROTO_IMPORTS = {
+    PROTO_ANY: "google/protobuf/any.proto",
+    PROTO_VALUE: "google/protobuf/struct.proto",
+    PROTO_STRUCT: "google/protobuf/struct.proto",
+    PROTO_TIMESTAMP: "google/protobuf/timestamp.proto",
+}
 
 DJANGO_TO_PROTO_FIELD_TYPE = {
     models.FileField: "string",
     models.TextField: "string",
     models.CharField: "string",
     models.UUIDField: "string",
-    JSONField: "string",
     models.IntegerField: "int32",
     models.BooleanField: "bool",
+    JSONField: PROTO_VALUE,
     models.DateTimeField: PROTO_TIMESTAMP,
 }
 
@@ -51,10 +57,10 @@ def gen_proto_for_models(dj_models):
                 line = f"{proto_type} {field_name} = {i + 1};"
                 print(" " * 4 + line)
 
-                if proto_type == PROTO_STRUCT:
-                    imports.add(PROTO_STRUCT_IMPORT)
-                if proto_type == PROTO_TIMESTAMP:
-                    imports.add(PROTO_TIMESTAMP_IMPORT)
+                try:
+                    imports.add(PROTO_IMPORTS[proto_type])
+                except KeyError:
+                    pass
 
             print("}\n")
 
