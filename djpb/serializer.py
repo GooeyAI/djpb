@@ -102,11 +102,16 @@ class ReverseManySerializer(FieldSerializer):
     field_types = (ReverseManyToOneDescriptor, models.ManyToManyField)
 
     def update_proto(self, proto_obj, field_name, value):
+        from djpb import django_to_proto
+
+        msgs = [django_to_proto(obj) for obj in value.all()]
         field = getattr(proto_obj, field_name)
-        existing = set(list(field))
-        to_add = existing - set(value.all())
-        field.extend(to_add)
+        del field[:]
+        field.extend(msgs)
 
     def update_django(self, django_obj, field_name, value):
+        from djpb import proto_to_django
+
+        value = [proto_to_django(obj) for obj in value]
         field = getattr(django_obj, field_name)
-        field.set(value)
+        field.set(value, bulk=False)
