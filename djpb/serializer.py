@@ -1,13 +1,11 @@
-import json
 import typing as T
 import uuid
 
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
-from google.protobuf.any_pb2 import Any
 from google.protobuf.json_format import MessageToDict, ParseDict
-from google.protobuf.struct_pb2 import Value, Struct
+from google.protobuf.struct_pb2 import Value
 
 
 class FieldSerializer:
@@ -59,10 +57,25 @@ class UUIDFieldSerializer(FieldSerializer):
 @register_serializer
 class FileFieldSerializer(FieldSerializer):
     field_types = (models.FileField,)
+    use_url = True
 
     def update_proto(self, proto_obj, field_name, value):
-        value = str(value)
+        if self.__class__.use_url:
+            try:
+                value = value.url
+            except ValueError:
+                value = ""
+        else:
+            value = str(value)
         super().update_proto(proto_obj, field_name, value)
+
+    def update_django(self, django_obj, field_name, value):
+        if value.startswith("https://") or value.startswith("http://"):
+            qualname = f"{django_obj.__class__.__qualname__}.{field_name}"
+            raise ValueError(
+                f"Make sure you provide the file path, not URL for FileField {qualname!r} ({value!r})."
+            )
+        super().update_django(django_obj, field_name, value)
 
 
 @register_serializer
