@@ -7,6 +7,8 @@ from django.db.models.fields.related_descriptors import ReverseManyToOneDescript
 from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.struct_pb2 import Value
 
+from djpb.util import get_django_field_repr
+
 
 class FieldSerializer:
     field_types: T.Iterable[models.Field]
@@ -67,14 +69,18 @@ class FileFieldSerializer(FieldSerializer):
                 value = ""
         else:
             value = str(value)
+
         super().update_proto(proto_obj, field_name, value)
 
     def update_django(self, django_obj, field_name, value):
-        if value.startswith("https://") or value.startswith("http://"):
-            qualname = f"{django_obj.__class__.__qualname__}.{field_name}"
-            raise ValueError(
-                f"Make sure you provide the file path, not URL for FileField {qualname!r} ({value!r})."
+        if "://" in value:
+            django_field_repr = get_django_field_repr(
+                models.FileField, django_obj.__class__, field_name
             )
+            raise ValueError(
+                f"Please provide the file path, not the URL for {django_field_repr} = {value!r}."
+            )
+
         super().update_django(django_obj, field_name, value)
 
 
@@ -125,6 +131,14 @@ class ReverseManySerializer(FieldSerializer):
     def update_django(self, django_obj, field_name, value):
         from djpb import proto_to_django
 
-        value = [proto_to_django(obj) for obj in value]
-        field = getattr(django_obj, field_name)
-        field.set(value, bulk=False)
+        django_obj.save()
+
+        rel_manager = getattr(django_obj, field_name)
+        rel_name = rel_manager.field.name
+
+        rel_objs = [proto_to_django(obj) for obj in value]
+        for rel_obj in rel_objs:
+            setattr(rel_obj, rel_name, django_obj)
+            rel_obj.save()
+
+        rel_manager.set(rel_objs, bulk=False)

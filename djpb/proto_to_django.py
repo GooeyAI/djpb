@@ -1,6 +1,12 @@
+from textwrap import indent
+
 from djpb.django_to_proto import SERIALIZERS, DEFAULT_SERIALIZER
 from djpb.registry import PROTO_CLS_TO_MODEL, MODEL_TO_PROTO_CLS
-from djpb.util import create_django_field_map, get_django_field_type
+from djpb.util import (
+    build_django_field_map,
+    resolve_django_field_type,
+    get_django_field_repr,
+)
 
 
 def proto_to_django(proto_obj, django_obj=None):
@@ -10,7 +16,7 @@ def proto_to_django(proto_obj, django_obj=None):
         django_obj = django_cls()
 
     django_model = django_obj.__class__
-    field_map = create_django_field_map(django_obj)
+    field_map = build_django_field_map(django_obj)
 
     for proto_field in proto_obj.DESCRIPTOR.fields:
         field_name = proto_field.name
@@ -22,13 +28,23 @@ def proto_to_django(proto_obj, django_obj=None):
         except ValueError:
             pass
 
-        django_field_type = get_django_field_type(django_model, field_map, field_name)
+        django_field_type = resolve_django_field_type(
+            django_model, field_map, field_name
+        )
         value = getattr(proto_obj, field_name)
 
-        # print(field_name, django_field_type)
-
         serializer = SERIALIZERS.get(django_field_type, DEFAULT_SERIALIZER)
-        serializer.update_django(django_obj, field_name, value)
+
+        try:
+            serializer.update_django(django_obj, field_name, value)
+        except Exception as e:
+            django_field_repr = get_django_field_repr(
+                django_field_type, django_model, field_name
+            )
+            serializer_repr = repr(serializer.__class__.__qualname__)
+            raise ValueError(
+                f"Failed to de-serialize {django_field_repr} using {serializer_repr}."
+            ) from e
 
     return django_obj
 

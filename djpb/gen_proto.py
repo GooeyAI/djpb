@@ -9,6 +9,8 @@ from django.db.models.fields.related_descriptors import (
     ReverseOneToOneDescriptor,
 )
 
+from djpb.util import get_django_field_repr
+
 PROTO_TIMESTAMP = "google.protobuf.Timestamp"
 PROTO_STRUCT = "google.protobuf.Struct"
 PROTO_ANY = "google.protobuf.Any"
@@ -148,9 +150,9 @@ def _resolve_proto_type(field_name, field, model, proto_models):
             break
 
     if proto_type is None:
+        django_field_repr = get_django_field_repr(field_type, model, field_name)
         raise ValueError(
-            f"Cannot convert {field_type.__qualname__!r} "
-            f"'{model.__qualname__}.{field_name}' to protobuf type."
+            f"Could not find a suitable protobuf type for {django_field_repr}."
         )
 
     return proto_type
