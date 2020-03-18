@@ -7,9 +7,10 @@ from django.db import models
 from django.db.models.fields.related_descriptors import (
     ReverseManyToOneDescriptor,
     ReverseOneToOneDescriptor,
+    ManyToManyDescriptor,
 )
 
-from djpb.util import get_django_field_repr
+from djpb.util import get_django_field_repr, build_django_field_map
 
 PROTO_TIMESTAMP = "google.protobuf.Timestamp"
 PROTO_STRUCT = "google.protobuf.Struct"
@@ -37,11 +38,11 @@ DJANGO_TO_PROTO_FIELD_TYPE = {
 RELATED_FIELD_TYPES = [
     models.ForeignKey,
     models.OneToOneField,
-    models.ManyToManyField,
     ReverseManyToOneDescriptor,
     ReverseOneToOneDescriptor,
+    ManyToManyDescriptor,
 ]
-RELATED_FIELD_TYPES_MANY = [models.ManyToManyField, ReverseManyToOneDescriptor]
+RELATED_FIELD_TYPES_MANY = [ManyToManyDescriptor, ReverseManyToOneDescriptor]
 
 
 def gen_proto_for_models(dj_models):
@@ -96,7 +97,7 @@ def _gen_proto_for_model(model, proto_models):
     except AttributeError:
         extra = set()
 
-    field_map = {f.name: f for f in model._meta.fields}
+    field_map = build_django_field_map(model)
 
     for name in extra:
         if name in field_map:

@@ -1,6 +1,7 @@
 import typing as T
 import uuid
 
+from django.conf import settings
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
@@ -59,10 +60,16 @@ class UUIDFieldSerializer(FieldSerializer):
 @register_serializer
 class FileFieldSerializer(FieldSerializer):
     field_types = (models.FileField,)
-    use_url = True
+
+    @property
+    def use_url(self):
+        try:
+            return settings.DJPB_FILE_FIELD_USE_URL
+        except AttributeError:
+            return False
 
     def update_proto(self, proto_obj, field_name, value):
-        if self.__class__.use_url:
+        if self.use_url:
             try:
                 value = value.url
             except ValueError:

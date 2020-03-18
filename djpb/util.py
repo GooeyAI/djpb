@@ -4,13 +4,18 @@ from django.db import models
 
 DjangoFieldMap = T.Dict[str, models.Field]
 
+from django.db import models
+
 
 def build_django_field_map(django_obj) -> DjangoFieldMap:
-    return {f.name: f for f in django_obj._meta.get_fields()}
+    options = django_obj._meta
+    fields = options.fields + options.many_to_many
+    field_map = {f.name: f for f in fields}
+    return field_map
 
 
 def resolve_django_field_type(
-    django_model, field_map: DjangoFieldMap, field_name: str
+    django_model: T.Type[models.Model], field_map: DjangoFieldMap, field_name: str
 ) -> T.Type[models.Field]:
     django_field = None
     try:
@@ -32,6 +37,8 @@ def resolve_django_field_type(
 
 
 def get_django_field_repr(
-    django_field_type: T.Type[models.Field], django_model, field_name: str
+    django_field_type: T.Type[models.Field],
+    django_model: T.Type[models.Model],
+    field_name: str,
 ):
     return f"field '{django_model.__qualname__}.{field_name}' of type {django_field_type.__qualname__!r}"

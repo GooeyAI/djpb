@@ -1,7 +1,8 @@
 from django.core.exceptions import ObjectDoesNotExist
-from textwrap import indent
+from django.db import models
+
 from djpb.registry import MODEL_TO_PROTO_CLS
-from djpb.serializer import SERIALIZERS, DEFAULT_SERIALIZER
+from djpb.serializers import SERIALIZERS, DEFAULT_SERIALIZER
 from djpb.util import (
     build_django_field_map,
     resolve_django_field_type,
@@ -9,7 +10,7 @@ from djpb.util import (
 )
 
 
-def django_to_proto(django_obj, proto_obj=None):
+def django_to_proto(django_obj: models.Model, proto_obj=None):
     if proto_obj is None:
         django_cls = type(django_obj)
         proto_cls = MODEL_TO_PROTO_CLS[django_cls]
