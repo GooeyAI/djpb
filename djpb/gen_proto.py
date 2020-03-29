@@ -38,11 +38,16 @@ DJANGO_TO_PROTO_FIELD_TYPE = {
 RELATED_FIELD_TYPES = [
     models.ForeignKey,
     models.OneToOneField,
+    models.ManyToManyField,
     ReverseManyToOneDescriptor,
     ReverseOneToOneDescriptor,
     ManyToManyDescriptor,
 ]
-RELATED_FIELD_TYPES_MANY = [ManyToManyDescriptor, ReverseManyToOneDescriptor]
+RELATED_FIELD_TYPES_MANY = [
+    models.ManyToManyField,
+    ManyToManyDescriptor,
+    ReverseManyToOneDescriptor,
+]
 
 
 def gen_proto_for_models(dj_models):

@@ -40,5 +40,5 @@ def get_django_field_repr(
     django_field_type: T.Type[models.Field],
     django_model: T.Type[models.Model],
     field_name: str,
-):
+) -> str:
     return f"field '{django_model.__qualname__}.{field_name}' of type {django_field_type.__qualname__!r}"
