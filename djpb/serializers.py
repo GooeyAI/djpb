@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.postgres.fields import JSONField
 from django.db import models, transaction
 from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
+from django.utils import timezone
 from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.message import Message
 from google.protobuf.struct_pb2 import Value
@@ -45,6 +46,7 @@ class DateTimeFieldSerializer(FieldSerializer):
 
     def update_django(self, node, field_name, value):
         value = value.ToDatetime()
+        value = value.replace(tzinfo=timezone.utc)
         super().update_django(node, field_name, value)
 
 
