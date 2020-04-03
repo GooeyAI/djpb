@@ -103,6 +103,7 @@ def _gen_proto_for_model(model, proto_models):
         extra = set()
 
     field_map = build_django_field_map(model)
+    del field_map["id"]  # exclude id by default
 
     for name in extra:
         if name in field_map:
