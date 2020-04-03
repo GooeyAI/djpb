@@ -124,7 +124,7 @@ class DeferredSerializer(FieldSerializer):
             child_node = _proto_to_django(pb_obj)
             node.add_child(self, field_name, child_node)
 
-    def save(self, djano_obj: models.Model, field_name: str, child_node: "SaveNode"):
+    def save(self, django_obj: models.Model, field_name: str, child_node: "SaveNode"):
         ...
 
 
