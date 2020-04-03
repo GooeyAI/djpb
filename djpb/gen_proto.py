@@ -101,16 +101,22 @@ def _gen_proto_for_model(model, proto_models):
         extra = set(model.ProtoMeta.extra)
     except AttributeError:
         extra = set()
+    assert exclude.isdisjoint(extra), "'exclude' and 'extra' must be disjoint sets."
 
     field_map = build_django_field_map(model)
-    del field_map["id"]  # exclude id by default
+
+    # exclude the primary key by default
+    pk_name = model._meta.pk.name
+    if pk_name not in extra:
+        del field_map[pk_name]
+
+    for name in exclude:
+        del field_map[name]
 
     for name in extra:
         if name in field_map:
             continue
         field_map[name] = getattr(model, name)
-    for name in exclude:
-        del field_map[name]
 
     fields = {
         name: _resolve_proto_type(name, field, model, proto_models)
