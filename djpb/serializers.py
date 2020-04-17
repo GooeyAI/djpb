@@ -1,11 +1,10 @@
 import typing as T
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from django import db
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField
-from django.db import models, transaction
+from django.db import models
 from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
 from django.utils import timezone
 from google.protobuf.json_format import MessageToDict, ParseDict
@@ -124,7 +123,13 @@ class DeferredSerializer(FieldSerializer):
             child_node = _proto_to_django(pb_obj)
             node.add_child(self, field_name, child_node)
 
-    def save(self, django_obj: models.Model, field_name: str, child_node: "SaveNode"):
+    def save(
+        self,
+        django_obj: models.Model,
+        field_name: str,
+        child_node: "SaveNode",
+        do_full_clean: bool,
+    ):
         ...
 
 
@@ -139,10 +144,17 @@ class OneToXSerializer(DeferredSerializer):
         field = getattr(proto_obj, field_name)
         field.CopyFrom(value)
 
-    def save(self, django_obj, field_name, child_node):
-        child_node.save()
+    def save(self, django_obj, field_name, child_node, do_full_clean):
+        # save child object
+        child_node.save(do_full_clean)
         rel_obj = child_node.django_obj
+
+        # set parent object's field to child object
         setattr(django_obj, field_name, rel_obj)
+
+        # save parent object
+        if do_full_clean:
+            django_obj.full_clean()
         django_obj.save()
 
 
@@ -160,22 +172,38 @@ class ManyToXSerializer(DeferredSerializer):
 class ManyToOneSerializer(ManyToXSerializer):
     field_types = (ReverseManyToOneDescriptor,)
 
-    def save(self, django_obj, field_name, child_node):
+    def save(self, django_obj, field_name, child_node, do_full_clean):
+        # save parent object
+        if do_full_clean:
+            django_obj.full_clean()
         django_obj.save()
-        rel_manager = getattr(django_obj, field_name)
+
+        # get child object
         rel_obj = child_node.django_obj
+
+        # set child object's field to parent object
+        rel_manager = getattr(django_obj, field_name)
         rel_name = rel_manager.field.name
         setattr(rel_obj, rel_name, django_obj)
-        child_node.save()
+
+        # save related object
+        child_node.save(do_full_clean)
 
 
 @register_serializer
 class ManyToManySerializer(ManyToXSerializer):
     field_types = (models.ManyToManyField,)
 
-    def save(self, django_obj, field_name, child_node):
-        child_node.save()
+    def save(self, django_obj, field_name, child_node, do_full_clean):
+        # save child object
+        child_node.save(do_full_clean)
+
+        # save parent object
+        if do_full_clean:
+            django_obj.full_clean()
         django_obj.save()
+
+        # add child to parent's m2m manager
         rel_manager = getattr(django_obj, field_name)
         rel_obj = child_node.django_obj
         rel_manager.add(rel_obj)
@@ -204,9 +232,11 @@ class SaveNode:
         child = SaveNodeChild(*args, **kwargs)
         self._children.add(child)
 
-    def save(self):
+    def save(self, do_full_clean: bool):
         if self._children:
             for serializer, field_name, child_node in self._children:
-                serializer.save(self.django_obj, field_name, child_node)
+                serializer.save(self.django_obj, field_name, child_node, do_full_clean)
         else:
+            if do_full_clean:
+                self.django_obj.full_clean()
             self.django_obj.save()

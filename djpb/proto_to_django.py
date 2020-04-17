@@ -13,10 +13,10 @@ from djpb.util import (
 )
 
 
-def proto_to_django(proto_obj: Message, django_obj=None):
+def proto_to_django(proto_obj: Message, django_obj=None, *, do_full_clean=False):
     node = _proto_to_django(proto_obj, django_obj)
     with transaction.atomic():
-        node.save()
+        node.save(do_full_clean)
     django_obj = node.django_obj
     return django_obj
 
