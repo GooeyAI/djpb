@@ -67,9 +67,11 @@ def proto_bytes_to_django(
     proto_bytes: bytes,
     django_model: T.Type[models.Model],
     django_obj: models.Model = None,
+    *,
+    do_full_clean=False,
 ) -> models.Model:
     proto_obj = proto_bytes_to_proto(proto_bytes, django_model)
-    django_obj = proto_to_django(proto_obj, django_obj)
+    django_obj = proto_to_django(proto_obj, django_obj, do_full_clean=do_full_clean)
     return django_obj
 
 
