@@ -14,13 +14,23 @@ def django_to_proto(django_obj: models.Model, proto_obj=None):
     if proto_obj is None:
         django_cls = type(django_obj)
         proto_cls = MODEL_TO_PROTO_CLS[django_cls]
+        if proto_cls is None:
+            raise ValueError(
+                f"Please specify the protobuf class for the model {django_cls.__qualname__!r}."
+            )
         proto_obj = proto_cls()
 
     django_model = django_obj.__class__
     field_map = build_django_field_map(django_obj)
 
+    custom = getattr(getattr(django_model, "ProtoMeta", None), "custom", {})
+
     for proto_field in proto_obj.DESCRIPTOR.fields:
         field_name = proto_field.name
+
+        if field_name in custom:
+            continue
+
         django_field_type = resolve_django_field_type(
             django_model, field_map, field_name
         )

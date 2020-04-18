@@ -11,11 +11,17 @@ from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.message import Message
 from google.protobuf.struct_pb2 import Value
 
+from djpb.gen_proto import (
+    DJANGO_TO_PROTO_FIELD_TYPE,
+    PROTO_VALUE_TYPE,
+    PROTO_TIMESTAMP_TYPE,
+)
 from djpb.util import get_django_field_repr
 
 
 class FieldSerializer:
     field_types: T.Iterable[models.Field]
+    proto_type_name: str
 
     def update_proto(self, proto_obj: Message, field_name: str, value):
         setattr(proto_obj, field_name, value)
@@ -30,14 +36,21 @@ SERIALIZERS: T.Dict[T.Type[models.Field], FieldSerializer] = {}
 
 def register_serializer(cls: T.Type[FieldSerializer]) -> T.Type[FieldSerializer]:
     assert issubclass(cls, FieldSerializer)
+
+    proto_type_name = getattr(cls, "proto_type_name", None)
+
     for field_type in cls.field_types:
         SERIALIZERS[field_type] = cls()
+        if proto_type_name:
+            DJANGO_TO_PROTO_FIELD_TYPE[field_type] = proto_type_name
+
     return cls
 
 
 @register_serializer
 class DateTimeFieldSerializer(FieldSerializer):
     field_types = (models.DateTimeField,)
+    proto_type_name = PROTO_TIMESTAMP_TYPE
 
     def update_proto(self, proto_obj, field_name, value):
         field = getattr(proto_obj, field_name)
@@ -52,6 +65,7 @@ class DateTimeFieldSerializer(FieldSerializer):
 @register_serializer
 class UUIDFieldSerializer(FieldSerializer):
     field_types = (models.UUIDField,)
+    proto_type_name = "string"
 
     def update_proto(self, proto_obj, field_name, value):
         value = str(value)
@@ -65,6 +79,7 @@ class UUIDFieldSerializer(FieldSerializer):
 @register_serializer
 class FileFieldSerializer(FieldSerializer):
     field_types = (models.FileField,)
+    proto_type_name = "string"
 
     @property
     def use_url(self):
@@ -99,6 +114,7 @@ class FileFieldSerializer(FieldSerializer):
 @register_serializer
 class JSONFieldSerializer(FieldSerializer):
     field_types = (JSONField,)
+    proto_type_name = PROTO_VALUE_TYPE
 
     def update_proto(self, proto_obj, field_name, value):
         value = ParseDict(value, Value())

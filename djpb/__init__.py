@@ -8,6 +8,6 @@ from djpb.proto_to_django import (
 from djpb.registry import register_model
 
 try:
-    from djpb.drf_serializers import create_drf_serializer
+    from djpb.rest_framework_serializer import RestFrameworkSerializer
 except ImportError:
     pass

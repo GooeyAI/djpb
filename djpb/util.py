@@ -42,3 +42,7 @@ def get_django_field_repr(
     field_name: str,
 ) -> str:
     return f"field '{django_model.__qualname__}.{field_name}' of type {django_field_type.__qualname__!r}"
+
+
+def disjoint(x, y):
+    return set(x).isdisjoint(y)
