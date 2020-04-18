@@ -14,13 +14,14 @@ from .registry import MODEL_TO_PROTO_CLS
 class RestFrameworkSerializer(serializers.BaseSerializer):
     class Meta:
         model: T.Type[models.Model]
-        do_full_clean = False
+        do_full_clean: bool
 
     @classmethod
-    def from_model(cls, _model: T.Type[models.Model]):
+    def from_model(cls, _model: T.Type[models.Model], _do_full_clean=True):
         class Serializer(RestFrameworkSerializer):
             class Meta:
                 model = _model
+                do_full_clean = _do_full_clean
 
         return Serializer
 
@@ -48,7 +49,9 @@ class RestFrameworkSerializer(serializers.BaseSerializer):
 
         try:
             instance = proto_to_django(
-                proto_obj, instance, do_full_clean=self.Meta.do_full_clean
+                proto_obj,
+                instance,
+                do_full_clean=getattr(self.Meta, "do_full_clean", True),
             )
         except ValidationError as e:
             raise serializers.ValidationError(get_error_detail(e))
