@@ -2,7 +2,6 @@ import inspect
 import io
 from contextlib import redirect_stdout
 
-from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models.fields.related_descriptors import (
     ReverseManyToOneDescriptor,
@@ -157,6 +156,7 @@ def _resolve_proto_type(field_name, field, model, proto_models):
 
         return proto_type
 
+    # walk down the MRO to resolve the field type
     proto_type = None
     for base_type in inspect.getmro(field_type):
         try:

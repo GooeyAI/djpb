@@ -1,3 +1,5 @@
+import inspect
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
@@ -57,7 +59,15 @@ def django_to_proto(django_obj: models.Model, proto_obj=None):
                 f"because protobuf doesn't support null types."
             )
 
-        serializer = SERIALIZERS.get(django_field_type, DEFAULT_SERIALIZER)
+        # walk down the MRO to resolve the serializer for this field type
+        serializer = DEFAULT_SERIALIZER
+        for base_type in inspect.getmro(django_field_type):
+            try:
+                serializer = SERIALIZERS[base_type]
+            except KeyError:
+                continue
+            else:
+                break
 
         try:
             serializer.update_proto(proto_obj, field_name, value)
