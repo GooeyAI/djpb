@@ -13,19 +13,21 @@ from djpb.util import (
 
 
 def django_to_proto(django_obj: models.Model, proto_obj=None):
+    django_model = type(django_obj)
+
     if proto_obj is None:
-        django_cls = type(django_obj)
-        proto_cls = MODEL_TO_PROTO_CLS[django_cls]
+        proto_cls = MODEL_TO_PROTO_CLS[django_model]
         if proto_cls is None:
             raise ValueError(
-                f"Please specify the protobuf class for the model {django_cls.__qualname__!r}."
+                f"Please specify the protobuf class for the model {django_model.__qualname__!r}."
             )
         proto_obj = proto_cls()
 
-    django_model = django_obj.__class__
     field_map = build_django_field_map(django_obj)
 
-    custom = getattr(getattr(django_model, "ProtoMeta", None), "custom", {})
+    proto_meta = getattr(django_model, "ProtoMeta", None)
+    custom = getattr(proto_meta, "custom", {})
+    null_str_fields = getattr(proto_meta, "null_str_fields", ())
 
     for proto_field in proto_obj.DESCRIPTOR.fields:
         field_name = proto_field.name
@@ -47,17 +49,22 @@ def django_to_proto(django_obj: models.Model, proto_obj=None):
             raise
 
         if value is None:
-            if is_wrapper_type:
+            if field_name in null_str_fields:
+                # use empty string and None interchangeably
+                value = ""
+
+            elif is_wrapper_type:
                 # leave this field "unset"
                 continue
 
-            django_field_repr = get_django_field_repr(
-                django_field_type, django_model, field_name
-            )
-            raise ValueError(
-                f"Can't serialize None-type value for {django_field_repr}, "
-                f"because protobuf doesn't support null types."
-            )
+            else:
+                django_field_repr = get_django_field_repr(
+                    django_field_type, django_model, field_name
+                )
+                raise ValueError(
+                    f"Can't serialize None-type value for {django_field_repr}, "
+                    f"because protobuf doesn't support null types."
+                )
 
         # walk down the MRO to resolve the serializer for this field type
         serializer = DEFAULT_SERIALIZER

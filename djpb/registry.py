@@ -3,12 +3,10 @@ PROTO_CLS_TO_MODEL = {}
 
 
 def register_model(django_model):
-    proto_cls = None
-
     try:
         proto_cls = django_model.ProtoMeta.cls
     except AttributeError:
-        pass
+        proto_cls = None
 
     MODEL_TO_PROTO_CLS[django_model] = proto_cls
 

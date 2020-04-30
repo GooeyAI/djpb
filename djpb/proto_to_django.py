@@ -31,6 +31,9 @@ def _proto_to_django(proto_obj: Message, django_obj=None) -> SaveNode:
     field_map = build_django_field_map(django_obj)
     node = SaveNode(django_obj)
 
+    proto_meta = getattr(django_model, "ProtoMeta", None)
+    null_str_fields = getattr(proto_meta, "null_str_fields", ())
+
     for proto_field in proto_obj.DESCRIPTOR.fields:
         field_name = proto_field.name
 
@@ -45,6 +48,10 @@ def _proto_to_django(proto_obj: Message, django_obj=None) -> SaveNode:
             django_model, field_map, field_name
         )
         value = getattr(proto_obj, field_name)
+
+        if value == "" and value in null_str_fields:
+            # use empty string and None interchangeably
+            value = None
 
         serializer: FieldSerializer = SERIALIZERS.get(
             django_field_type, DEFAULT_SERIALIZER
