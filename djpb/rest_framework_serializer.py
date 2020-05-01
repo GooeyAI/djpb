@@ -46,15 +46,16 @@ class RestFrameworkSerializer(serializers.BaseSerializer):
     def update(self, instance, validated_data):
         proto_obj = self.proto_cls()
         ParseDict(validated_data, proto_obj)
+        return self.from_proto_representation(proto_obj, instance)
 
-        try:
-            instance = proto_to_django(
-                proto_obj,
-                instance,
-                do_full_clean=getattr(self.Meta, "do_full_clean", True),
-            )
-        except ValidationError as e:
-            raise serializers.ValidationError(get_error_detail(e))
+    def from_proto_representation(self, proto_obj, instance):
+        # try:
+        instance = proto_to_django(
+            proto_obj, instance, do_full_clean=getattr(self.Meta, "do_full_clean", True)
+        )
+        # except ValidationError as e:
+        #     print(e)
+        #     raise serializers.ValidationError(get_error_detail(e))
 
         return instance
 

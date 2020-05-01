@@ -22,10 +22,26 @@ def proto_to_django(proto_obj: Message, django_obj=None, *, do_full_clean=False)
 
 
 def _proto_to_django(proto_obj: Message, django_obj=None) -> SaveNode:
+    proto_fields = {x.name: x for x in proto_obj.DESCRIPTOR.fields}
+
     if django_obj is None:
         proto_cls = type(proto_obj)
         django_cls = PROTO_CLS_TO_MODEL[proto_cls]
-        django_obj = django_cls()
+
+        # try to get an existing object if it's pk is present in the proto fields
+        pk_field_name = django_cls._meta.pk.name
+
+        if pk_field_name in proto_fields:
+            pk = getattr(proto_obj, pk_field_name)
+
+            if pk:  # pk might be 0, let's ignore that
+                try:
+                    django_obj = django_cls.objects.get(**{pk_field_name: pk})
+                except django_cls.DoesNotExist:
+                    pass
+
+        if django_obj is None:
+            django_obj = django_cls()
 
     django_model = django_obj.__class__
     field_map = build_django_field_map(django_obj)
@@ -34,9 +50,7 @@ def _proto_to_django(proto_obj: Message, django_obj=None) -> SaveNode:
     proto_meta = getattr(django_model, "ProtoMeta", None)
     null_str_fields = getattr(proto_meta, "null_str_fields", ())
 
-    for proto_field in proto_obj.DESCRIPTOR.fields:
-        field_name = proto_field.name
-
+    for field_name, proto_field in proto_fields.items():
         try:
             if not proto_obj.HasField(field_name):
                 # leave "unset" fields as-is
