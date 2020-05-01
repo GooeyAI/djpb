@@ -49,13 +49,14 @@ class RestFrameworkSerializer(serializers.BaseSerializer):
         return self.from_proto_representation(proto_obj, instance)
 
     def from_proto_representation(self, proto_obj, instance):
-        # try:
-        instance = proto_to_django(
-            proto_obj, instance, do_full_clean=getattr(self.Meta, "do_full_clean", True)
-        )
-        # except ValidationError as e:
-        #     print(e)
-        #     raise serializers.ValidationError(get_error_detail(e))
+        try:
+            instance = proto_to_django(
+                proto_obj,
+                instance,
+                do_full_clean=getattr(self.Meta, "do_full_clean", True),
+            )
+        except ValidationError as e:
+            raise serializers.ValidationError(get_error_detail(e))
 
         return instance
 
