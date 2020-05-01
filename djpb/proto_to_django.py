@@ -49,7 +49,7 @@ def _proto_to_django(proto_obj: Message, django_obj=None) -> SaveNode:
         )
         value = getattr(proto_obj, field_name)
 
-        if value == "" and value in null_str_fields:
+        if field_name in null_str_fields and value == "":
             # use empty string and None interchangeably
             value = None
 
