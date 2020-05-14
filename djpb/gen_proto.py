@@ -1,8 +1,7 @@
 import inspect
 import io
+ import typing
 from contextlib import redirect_stdout
-
-import typing
 from textwrap import indent
 
 from django.db import models
@@ -10,9 +9,10 @@ from django.db.models.fields.related_descriptors import (
     ReverseManyToOneDescriptor,
     ReverseOneToOneDescriptor,
     ManyToManyDescriptor,
+    ForeignKeyDeferredAttribute,
 )
 
-from djpb.util import get_django_field_repr, build_django_field_map, disjoint
+from .util import get_django_field_repr, build_django_field_map, disjoint
 
 PROTO_TIMESTAMP_TYPE = "google.protobuf.Timestamp"
 PROTO_STRUCT_TYPE = "google.protobuf.Struct"
@@ -64,7 +64,6 @@ SCALAR_FIELD_TYPES = {
     "string",
     "bytes",
 }
-
 
 ProtoFields = typing.Dict[str, typing.Tuple[models.Field, str]]
 ProtoModels = typing.Dict[typing.Type[models.Model], ProtoFields]
@@ -125,7 +124,6 @@ def _gen_proto_for_model(model: typing.Type[models.Model], proto_models: ProtoMo
     exclude = getattr(meta, "exclude", ())
     extra = getattr(meta, "extra", ())
     fields = getattr(meta, "fields", None)
-    custom = getattr(meta, "custom", {})
 
     field_map = build_django_field_map(model)
 
@@ -153,25 +151,23 @@ def _gen_proto_for_model(model: typing.Type[models.Model], proto_models: ProtoMo
                 continue
             field_map[name] = getattr(model, name)
 
-    proto_fields: ProtoFields
-
     proto_fields = {
-        name: (field, _resolve_proto_type(name, field, model, proto_models))
+        name: _resolve_proto_type(name, field, model, proto_models)
         for name, field in field_map.items()
     }
+
+    # add custom fields
+    custom = getattr(meta, "custom", {})
     proto_fields.update(
-        {name: (None, proto_type) for name, proto_type in custom.items()}
+        {name: (field, field.proto_type) for name, field in custom.items()}
     )
 
     proto_models[model] = proto_fields
 
 
 def _resolve_proto_type(
-    field_name: str,
-    field: models.Field,
-    model: typing.Type[models.Model],
-    proto_models: ProtoModels,
-) -> str:
+    field_name: str, field, model: typing.Type[models.Model], proto_models: ProtoModels
+) -> typing.Tuple[models.Field, str]:
     field_type = type(field)
 
     proto_meta = getattr(model, "ProtoMeta", None)
@@ -180,7 +176,10 @@ def _resolve_proto_type(
     if field_name in enums:
         enum_cls = enums[field_name]
         enum_clsname = enum_cls.DESCRIPTOR.name
-        return enum_clsname
+        return field, enum_clsname
+
+    if issubclass(field_type, ForeignKeyDeferredAttribute):
+        return field.field, "int32"
 
     if field_type in RELATED_FIELD_TYPES:
         try:
@@ -194,7 +193,7 @@ def _resolve_proto_type(
         if field_type in RELATED_FIELD_TYPES_MANY:
             proto_type = f"repeated {proto_type}"
 
-        return proto_type
+        return field, proto_type
 
     # walk down the MRO to resolve the field type
     proto_type = None
@@ -212,4 +211,4 @@ def _resolve_proto_type(
             f"Could not find a suitable protobuf type for {django_field_repr}."
         )
 
-    return proto_type
+    return field, proto_type

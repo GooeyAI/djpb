@@ -1,10 +1,8 @@
-import typing as T
+import typing
 
 from django.db import models
 
-DjangoFieldMap = T.Dict[str, models.Field]
-
-from django.db import models
+DjangoFieldMap = typing.Dict[str, models.Field]
 
 
 def build_django_field_map(django_obj) -> DjangoFieldMap:
@@ -15,8 +13,8 @@ def build_django_field_map(django_obj) -> DjangoFieldMap:
 
 
 def resolve_django_field_type(
-    django_model: T.Type[models.Model], field_map: DjangoFieldMap, field_name: str
-) -> T.Type[models.Field]:
+    django_model: typing.Type[models.Model], field_map: DjangoFieldMap, field_name: str
+) -> typing.Type[models.Field]:
     django_field = None
     try:
         django_field = field_map[field_name]
@@ -37,8 +35,8 @@ def resolve_django_field_type(
 
 
 def get_django_field_repr(
-    django_field_type: T.Type[models.Field],
-    django_model: T.Type[models.Model],
+    django_field_type: typing.Type[models.Field],
+    django_model: typing.Type[models.Model],
     field_name: str,
 ) -> str:
     return f"field '{django_model.__qualname__}.{field_name}' of type {django_field_type.__qualname__!r}"

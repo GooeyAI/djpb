@@ -11,7 +11,7 @@ from google.protobuf.json_format import MessageToDict, ParseDict
 from google.protobuf.message import Message
 from google.protobuf.struct_pb2 import Value
 
-from djpb.gen_proto import (
+from .gen_proto import (
     DJANGO_TO_PROTO_FIELD_TYPE,
     PROTO_VALUE_TYPE,
     PROTO_TIMESTAMP_TYPE,
@@ -137,7 +137,7 @@ class DeferredSerializer(FieldSerializer):
 
         for pb_obj in rel_pb_objs:
             child_node = _proto_to_django(pb_obj)
-            node.add_child(self, field_name, child_node)
+            node.add_child(SaveNodeChild(self, field_name, child_node))
 
     def save(
         self,
@@ -244,8 +244,7 @@ class SaveNode:
     def __hash__(self) -> int:
         return id(self.django_obj)
 
-    def add_child(self, *args, **kwargs):
-        child = SaveNodeChild(*args, **kwargs)
+    def add_child(self, child: SaveNodeChild):
         self._children.add(child)
 
     def save(self, do_full_clean: bool):

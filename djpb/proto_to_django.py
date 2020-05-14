@@ -49,30 +49,34 @@ def _proto_to_django(proto_obj: Message, django_obj=None) -> SaveNode:
     node = SaveNode(django_obj)
 
     proto_meta = getattr(django_model, "ProtoMeta", None)
-    null_str_fields = getattr(proto_meta, "null_str_fields", ())
-    custom = getattr(proto_meta, "custom", ())
+    custom = getattr(proto_meta, "custom", {})
 
     pre_proto_to_django.send(django_model, proto_obj=proto_obj, django_obj=django_obj)
 
     for field_name, proto_field in proto_fields.items():
-        if field_name in custom:
+        # determine if field is in "unset" state
+        try:
+            unset = not proto_obj.HasField(field_name)
+        except ValueError:
+            unset = False
+
+        if unset:
+            # leave "unset" fields as-is
             continue
 
+        # handle custom fields
         try:
-            if not proto_obj.HasField(field_name):
-                # leave "unset" fields as-is
-                continue
-        except ValueError:
+            field = custom[field_name]
+        except KeyError:
             pass
+        else:
+            field.update_django(node, proto_obj)
+            continue
 
         django_field_type = resolve_django_field_type(
             django_model, field_map, field_name
         )
         value = getattr(proto_obj, field_name)
-
-        if field_name in null_str_fields and value == "":
-            # use empty string and None interchangeably
-            value = None
 
         serializer: FieldSerializer = SERIALIZERS.get(
             django_field_type, DEFAULT_SERIALIZER
