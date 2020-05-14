@@ -2,6 +2,9 @@ import inspect
 import io
 from contextlib import redirect_stdout
 
+import typing
+from textwrap import indent
+
 from django.db import models
 from django.db.models.fields.related_descriptors import (
     ReverseManyToOneDescriptor,
@@ -44,9 +47,31 @@ RELATED_FIELD_TYPES_MANY = [
     ReverseManyToOneDescriptor,
 ]
 
+SCALAR_FIELD_TYPES = {
+    "double",
+    "float",
+    "int32",
+    "int64",
+    "uint32",
+    "uint64",
+    "sint32",
+    "sint64",
+    "fixed32",
+    "fixed64",
+    "sfixed32",
+    "sfixed64",
+    "bool",
+    "string",
+    "bytes",
+}
 
-def gen_proto_for_models(dj_models):
-    proto_models = {}
+
+ProtoFields = typing.Dict[str, typing.Tuple[models.Field, str]]
+ProtoModels = typing.Dict[typing.Type[models.Model], ProtoFields]
+
+
+def gen_proto_for_models(dj_models: typing.Iterable[typing.Type[models.Model]]):
+    proto_models: ProtoModels = {}
     imports = set()
 
     for model in dj_models:
@@ -56,9 +81,18 @@ def gen_proto_for_models(dj_models):
         for model, fields in proto_models.items():
             print("message %s {" % model.__name__)
 
-            for i, (field_name, proto_type) in enumerate(fields.items()):
+            for i, (field_name, (field, proto_type)) in enumerate(fields.items()):
                 line = f"{proto_type} {field_name} = {i + 1};"
-                print(" " * 4 + line)
+
+                oneof = (
+                    getattr(field, "null", False) and proto_type in SCALAR_FIELD_TYPES
+                )
+                if oneof:
+                    line = indent(line, " " * 4)
+                    line = "oneof __%s_oneof {\n%s\n}" % (field_name, line)
+
+                line = indent(line, " " * 4)
+                print(line)
 
                 try:
                     imports.add(PROTO_IMPORTS[proto_type])
@@ -82,7 +116,7 @@ def gen_proto_for_models(dj_models):
     return body
 
 
-def _gen_proto_for_model(model, proto_models):
+def _gen_proto_for_model(model: typing.Type[models.Model], proto_models: ProtoModels):
     if model in proto_models:
         return
     proto_models[model] = {}
@@ -119,23 +153,29 @@ def _gen_proto_for_model(model, proto_models):
                 continue
             field_map[name] = getattr(model, name)
 
-    fields = {
-        name: _resolve_proto_type(name, field, model, proto_models)
+    proto_fields: ProtoFields
+
+    proto_fields = {
+        name: (field, _resolve_proto_type(name, field, model, proto_models))
         for name, field in field_map.items()
     }
+    proto_fields.update(
+        {name: (None, proto_type) for name, proto_type in custom.items()}
+    )
 
-    fields.update({name: proto_type for name, proto_type in custom.items()})
-
-    proto_models[model] = fields
+    proto_models[model] = proto_fields
 
 
-def _resolve_proto_type(field_name, field, model, proto_models):
+def _resolve_proto_type(
+    field_name: str,
+    field: models.Field,
+    model: typing.Type[models.Model],
+    proto_models: ProtoModels,
+) -> str:
     field_type = type(field)
 
-    try:
-        enums = model.ProtoMeta.enums
-    except AttributeError:
-        enums = {}
+    proto_meta = getattr(model, "ProtoMeta", None)
+    enums = getattr(proto_meta, "enums", {})
 
     if field_name in enums:
         enum_cls = enums[field_name]

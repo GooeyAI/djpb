@@ -5,6 +5,7 @@ from django.db import models
 
 from djpb.registry import MODEL_TO_PROTO_CLS
 from djpb.serializers import SERIALIZERS, DEFAULT_SERIALIZER
+from djpb.signals import pre_django_to_proto, post_django_to_proto
 from djpb.util import (
     build_django_field_map,
     resolve_django_field_type,
@@ -28,6 +29,8 @@ def django_to_proto(django_obj: models.Model, proto_obj=None):
     proto_meta = getattr(django_model, "ProtoMeta", None)
     custom = getattr(proto_meta, "custom", {})
     null_str_fields = getattr(proto_meta, "null_str_fields", ())
+
+    pre_django_to_proto.send(django_model, proto_obj=proto_obj, django_obj=django_obj)
 
     for proto_field in proto_obj.DESCRIPTOR.fields:
         field_name = proto_field.name
@@ -86,6 +89,8 @@ def django_to_proto(django_obj: models.Model, proto_obj=None):
             raise ValueError(
                 f"Failed to serialize {django_field_repr} using {serializer_repr}."
             ) from e
+
+    post_django_to_proto.send(django_model, proto_obj=proto_obj, django_obj=django_obj)
 
     return proto_obj
 
