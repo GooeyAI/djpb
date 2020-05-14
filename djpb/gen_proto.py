@@ -1,6 +1,6 @@
 import inspect
 import io
- import typing
+import typing
 from contextlib import redirect_stdout
 from textwrap import indent
 
