@@ -179,9 +179,12 @@ def _resolve_proto_type(
         return field, enum_clsname
 
     if issubclass(field_type, ForeignKeyDeferredAttribute):
-        return field.field, "int32"
+        field = field.field
+        model = field.related_model
+        pk_field = model._meta.pk
+        proto_type = _proto_type_for_field(pk_field.name, type(pk_field), model)
 
-    if field_type in RELATED_FIELD_TYPES:
+    elif field_type in RELATED_FIELD_TYPES:
         try:
             related_model = field.related_model
         except AttributeError:
@@ -193,8 +196,17 @@ def _resolve_proto_type(
         if field_type in RELATED_FIELD_TYPES_MANY:
             proto_type = f"repeated {proto_type}"
 
-        return field, proto_type
+    else:
+        proto_type = _proto_type_for_field(field_name, field_type, model)
 
+    return field, proto_type
+
+
+def _proto_type_for_field(
+    field_name: str,
+    field_type: typing.Type[models.Field],
+    model: typing.Type[models.Model],
+) -> str:
     # walk down the MRO to resolve the field type
     proto_type = None
     for base_type in inspect.getmro(field_type):
@@ -204,11 +216,9 @@ def _resolve_proto_type(
             continue
         else:
             break
-
     if proto_type is None:
         django_field_repr = get_django_field_repr(field_type, model, field_name)
         raise ValueError(
             f"Could not find a suitable protobuf type for {django_field_repr}."
         )
-
-    return field, proto_type
+    return proto_type
