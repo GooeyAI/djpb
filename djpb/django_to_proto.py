@@ -40,7 +40,7 @@ def django_to_proto(django_obj: models.Model, proto_obj=None):
         except KeyError:
             pass
         else:
-            field.update_proto(django_obj, proto_obj)
+            field.update_proto(django_obj, proto_obj, field_name)
             continue
 
         django_field_type = resolve_django_field_type(

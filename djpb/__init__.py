@@ -6,7 +6,7 @@ from djpb.proto_to_django import (
     proto_bytes_to_proto,
 )
 from djpb.registry import register_model
-from .custom_field import CustomField
+from .custom_field import CustomField, ReadOnlyField
 
 try:
     from djpb.rest_framework_serializer import RestFrameworkSerializer

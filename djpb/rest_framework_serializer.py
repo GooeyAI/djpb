@@ -17,7 +17,7 @@ class RestFrameworkSerializer(serializers.BaseSerializer):
         do_full_clean: bool
 
     @classmethod
-    def from_model(cls, _model: T.Type[models.Model], _do_full_clean=True):
+    def for_model(cls, _model: T.Type[models.Model], _do_full_clean=True):
         class Serializer(RestFrameworkSerializer):
             class Meta:
                 model = _model

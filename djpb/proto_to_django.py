@@ -70,7 +70,7 @@ def _proto_to_django(proto_obj: Message, django_obj=None) -> SaveNode:
         except KeyError:
             pass
         else:
-            field.update_django(node, proto_obj)
+            field.update_django(node, proto_obj, field_name)
             continue
 
         django_field_type = resolve_django_field_type(
