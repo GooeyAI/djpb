@@ -1,6 +1,7 @@
 import typing
 
 from django.db import models
+from django.db.models.fields.related_descriptors import ForeignKeyDeferredAttribute
 
 DjangoFieldMap = typing.Dict[str, models.Field]
 
@@ -29,6 +30,10 @@ def resolve_django_field_type(
             f"Protobuf field {field_name!r} does not exist "
             f"in Django model {django_model.__qualname__!r}."
         )
+
+    if isinstance(django_field, ForeignKeyDeferredAttribute):
+        related_model = django_field.field.related_model
+        django_field = related_model._meta.pk
 
     django_field_type = type(django_field)
     return django_field_type

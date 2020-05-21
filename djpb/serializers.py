@@ -19,8 +19,28 @@ from .gen_proto import (
 from djpb.util import get_django_field_repr
 
 
+def register_serializer(cls: T.Type["FieldSerializer"]) -> T.Type["FieldSerializer"]:
+    assert issubclass(cls, FieldSerializer)
+
+    proto_type_name = getattr(cls, "proto_type_name", None)
+
+    for field_type in cls.field_types:
+        SERIALIZERS[field_type] = cls()
+        if proto_type_name:
+            DJANGO_TO_PROTO_FIELD_TYPE[field_type] = proto_type_name
+
+    return cls
+
+
 class FieldSerializer:
-    field_types: T.Iterable[models.Field]
+    """
+    The default serializer that does no serialization, and directly calls setattr.
+
+    All serializers must subclass FieldSerializer,
+    and register themselves using the @register_serializer decorator.
+    """
+
+    field_types: T.Iterable[T.Type[models.Field]]
     proto_type_name: str
 
     def update_proto(self, proto_obj: Message, field_name: str, value):
@@ -32,19 +52,6 @@ class FieldSerializer:
 
 DEFAULT_SERIALIZER = FieldSerializer()
 SERIALIZERS: T.Dict[T.Type[models.Field], FieldSerializer] = {}
-
-
-def register_serializer(cls: T.Type[FieldSerializer]) -> T.Type[FieldSerializer]:
-    assert issubclass(cls, FieldSerializer)
-
-    proto_type_name = getattr(cls, "proto_type_name", None)
-
-    for field_type in cls.field_types:
-        SERIALIZERS[field_type] = cls()
-        if proto_type_name:
-            DJANGO_TO_PROTO_FIELD_TYPE[field_type] = proto_type_name
-
-    return cls
 
 
 @register_serializer
