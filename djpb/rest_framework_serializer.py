@@ -39,9 +39,8 @@ class RestFrameworkSerializer(serializers.BaseSerializer):
         return data
 
     def create(self, validated_data):
-        django_obj = self.Meta.model()
-        django_obj = proto_to_django(validated_data, django_obj)
-        return django_obj
+        obj = self.update(self.Meta.model(), validated_data)
+        return obj
 
     def update(self, instance, validated_data):
         proto_obj = self.proto_cls()
