@@ -2,6 +2,7 @@ import typing
 
 from django.db import models
 from django.db.models.fields.related_descriptors import ForeignKeyDeferredAttribute
+from google.protobuf.message import Message
 
 DjangoFieldMap = typing.Dict[str, models.Field]
 
@@ -49,3 +50,9 @@ def get_django_field_repr(
 
 def disjoint(x, y):
     return set(x).isdisjoint(y)
+
+
+def create_proto_field_obj(proto_obj: Message, field_name: str) -> Message:
+    fields = {field.name: field for field in proto_obj.DESCRIPTOR.fields}
+    field = fields[field_name]
+    return field.message_type._concrete_class()

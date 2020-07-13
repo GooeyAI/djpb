@@ -16,7 +16,7 @@ from .gen_proto import (
     PROTO_VALUE_TYPE,
     PROTO_TIMESTAMP_TYPE,
 )
-from djpb.util import get_django_field_repr
+from djpb.util import get_django_field_repr, create_proto_field_obj
 
 
 def register_serializer(cls: T.Type["FieldSerializer"]) -> T.Type["FieldSerializer"]:
@@ -163,8 +163,8 @@ class OneToXSerializer(DeferredSerializer):
     def update_proto(self, proto_obj, field_name, value):
         from djpb import django_to_proto
 
-        value = django_to_proto(value)
         field = getattr(proto_obj, field_name)
+        value = django_to_proto(value, create_proto_field_obj(proto_obj, field_name))
         field.CopyFrom(value)
 
     def save(self, django_obj, field_name, child_node, do_full_clean):
@@ -185,8 +185,11 @@ class ManyToXSerializer(DeferredSerializer):
     def update_proto(self, proto_obj, field_name, value):
         from djpb import django_to_proto
 
-        msgs = [django_to_proto(obj) for obj in value.all()]
         field = getattr(proto_obj, field_name)
+        msgs = [
+            django_to_proto(obj, create_proto_field_obj(proto_obj, field_name))
+            for obj in value.all()
+        ]
         del field[:]
         field.extend(msgs)
 
