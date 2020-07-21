@@ -142,6 +142,9 @@ class DeferredSerializer(FieldSerializer):
         except TypeError:
             rel_pb_objs = [value]
 
+        field = getattr(node.django_obj, field_name)
+        field.all().delete()
+
         for pb_obj in rel_pb_objs:
             child_node = _proto_to_django(pb_obj)
             node.add_child(SaveNodeChild(self, field_name, child_node))
