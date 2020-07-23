@@ -9,6 +9,10 @@ from djpb.registry import register_model
 from .custom_field import CustomField, ReadOnlyField
 
 try:
-    from djpb.rest_framework_serializer import RestFrameworkSerializer
+    from djpb.rest_framework_serializer import (
+        RestFrameworkSerializer,
+        MessagePackParser,
+        MessagePackRenderer,
+    )
 except ImportError:
     pass
