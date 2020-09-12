@@ -120,10 +120,10 @@ def _gen_proto_for_model(model: typing.Type[models.Model], proto_models: ProtoMo
         return
     proto_models[model] = {}
 
-    meta = getattr(model, "ProtoMeta", None)
-    exclude = getattr(meta, "exclude", ())
-    extra = getattr(meta, "extra", ())
-    fields = getattr(meta, "fields", None)
+    proto_meta = getattr(model, "ProtoMeta", None)
+    exclude = getattr(proto_meta, "exclude", ())
+    extra = getattr(proto_meta, "extra", ())
+    fields = getattr(proto_meta, "fields", None)
 
     field_map = build_django_field_map(model)
 
@@ -157,7 +157,7 @@ def _gen_proto_for_model(model: typing.Type[models.Model], proto_models: ProtoMo
     }
 
     # add custom fields
-    custom = getattr(meta, "custom", {})
+    custom = getattr(proto_meta, "custom", {})
     proto_fields.update(
         {name: (field, field.proto_type) for name, field in custom.items()}
     )
