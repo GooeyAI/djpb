@@ -73,7 +73,7 @@ class RestFrameworkSerializer(serializers.BaseSerializer):
         except ValidationError as e:
             raise serializers.ValidationError(get_error_detail(e))
 
-    def to_representation(self, instance: DjModel) -> ProtoMsg:
+    def to_representation(self, instance: DjModel) -> bytes:
         proto_obj = self._to_proto(instance)
         return proto_obj.SerializeToString()
 

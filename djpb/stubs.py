@@ -1,13 +1,13 @@
 import typing
 
 from django.db import models
-from google.protobuf.reflection import GeneratedProtocolMessageType
+from google.protobuf.message import Message
 
-DjModel = typing.TypeVar("DjModel", bound=models.Model)
-DjModelType = typing.Type[DjModel]
+DjModel = models.Model
+DjModelType = typing.Type[models.Model]
 
-DjField = typing.TypeVar("DjField", bound=models.Field)
-DjFieldType = typing.Type[DjField]
+DjField = models.Field
+DjFieldType = typing.Type[models.Field]
 
-ProtoMsg = typing.TypeVar("ProtoMsg", bound=GeneratedProtocolMessageType)
-ProtoMsgType = typing.Type[ProtoMsg]
+ProtoMsg = Message
+ProtoMsgType = typing.Type[Message]

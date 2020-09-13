@@ -14,7 +14,7 @@ from .stubs import ProtoMsg, DjModel, DjModelType
 
 def proto_to_django(
     proto_obj: ProtoMsg, django_obj: DjModel = None, *, do_full_clean=False
-):
+) -> DjModel:
     node = _proto_to_django(proto_obj, django_obj)
     with transaction.atomic():
         node.save(do_full_clean)
