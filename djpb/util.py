@@ -1,5 +1,4 @@
 import typing
-from mailbox import Message
 
 from django.db.models.fields.related_descriptors import ForeignKeyDeferredAttribute
 
