@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 
-from django.db import models
-from google.protobuf.message import Message
-
 from .serializers import SaveNode
+from .stubs import DjModel, ProtoMsg
 
 
 @dataclass
@@ -11,12 +9,10 @@ class CustomField:
     proto_type: str
     null: bool = False
 
-    def update_proto(
-        self, django_obj: models.Model, proto_obj: Message, field_name: str
-    ):
+    def update_proto(self, django_obj: DjModel, proto_obj: ProtoMsg, field_name: str):
         pass
 
-    def update_django(self, node: "SaveNode", proto_obj: Message, field_name: str):
+    def update_django(self, node: "SaveNode", proto_obj: ProtoMsg, field_name: str):
         pass
 
 
@@ -24,9 +20,7 @@ class CustomField:
 class ReadOnlyField(CustomField):
     query: str = None
 
-    def update_proto(
-        self, django_obj: models.Model, proto_obj: Message, field_name: str
-    ):
+    def update_proto(self, django_obj, proto_obj, field_name):
         model = type(django_obj)
         value = (
             model.objects.filter(pk=django_obj.pk)
