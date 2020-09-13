@@ -1,7 +1,6 @@
 import typing as T
 
 from django.db import models, transaction
-from google.protobuf.message import Message
 
 from djpb.django_to_proto import SERIALIZERS, DEFAULT_SERIALIZER
 from djpb.registry import PROTO_CLS_TO_MODEL, MODEL_TO_PROTO_CLS
@@ -12,9 +11,10 @@ from djpb.util import (
     get_django_field_repr,
 )
 from .signals import post_proto_to_django, pre_proto_to_django
+from .stubs import ProtoMsg
 
 
-def proto_to_django(proto_obj: Message, django_obj=None, *, do_full_clean=False):
+def proto_to_django(proto_obj: ProtoMsg, django_obj=None, *, do_full_clean=False):
     node = _proto_to_django(proto_obj, django_obj)
     with transaction.atomic():
         node.save(do_full_clean)
@@ -22,7 +22,7 @@ def proto_to_django(proto_obj: Message, django_obj=None, *, do_full_clean=False)
     return django_obj
 
 
-def _proto_to_django(proto_obj: Message, django_obj=None) -> SaveNode:
+def _proto_to_django(proto_obj: ProtoMsg, django_obj=None) -> SaveNode:
     proto_fields = {x.name: x for x in proto_obj.DESCRIPTOR.fields}
 
     if django_obj is None:

@@ -1,10 +1,5 @@
-import typing as T
-
 import msgpack
 from django.core.exceptions import ValidationError
-from django.db import models
-from google.protobuf.message import Message
-from google.protobuf.reflection import GeneratedProtocolMessageType
 from msgpack import UnpackException
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
@@ -15,6 +10,7 @@ from rest_framework.renderers import BaseRenderer
 from .django_to_proto import django_to_proto
 from .proto_to_django import proto_to_django
 from .registry import MODEL_TO_PROTO_CLS
+from .stubs import DjModelType, ProtoMsgType, DjModel, ProtoMsg
 
 
 class MessagePackRenderer(BaseRenderer):
@@ -38,61 +34,64 @@ class MessagePackParser(BaseParser):
 
 
 class RestFrameworkSerializer(serializers.BaseSerializer):
-    class Meta:
-        model: T.Type[models.Model]
-        do_full_clean: bool
+    model: DjModelType
+    proto_cls: ProtoMsgType = None
+    do_full_clean: bool = True
 
-    @classmethod
+    @staticmethod
     def for_model(
-        cls, _model: T.Type[models.Model], _do_full_clean=True,
+        model: DjModelType,
+        *,
+        proto_cls: ProtoMsgType = None,
+        do_full_clean: bool = True,
     ):
-        class _RestFrameworkSerializer(RestFrameworkSerializer):
-            class Meta:
-                model = _model
-                do_full_clean = _do_full_clean
+        class RestFrameworkSerializerForModel(RestFrameworkSerializer):
+            pass
 
-        return _RestFrameworkSerializer
+        RestFrameworkSerializerForModel.model = model
+        RestFrameworkSerializerForModel.proto_cls = proto_cls
+        RestFrameworkSerializerForModel.do_full_clean = do_full_clean
+
+        return RestFrameworkSerializerForModel
 
     def to_internal_value(self, data):
         return data
 
-    def create(self, validated_data):
-        """Create a django `instance` from validated json data"""
-        return self.update(self.Meta.model(), validated_data)
+    def create(self, validated_data: bytes) -> DjModel:
+        return self.update(self.model(), validated_data)
 
-    def update(self, instance, validated_data):
-        """Update a django `instance` with validated json data"""
-        proto_obj = self.proto_cls.FromString(validated_data)
-        return self.from_proto_representation(proto_obj, instance)
+    def update(self, instance: DjModel, validated_data: bytes) -> DjModel:
+        proto_cls = self.get_proto_cls()
+        proto_obj = proto_cls.FromString(validated_data)
+        return self._from_proto(proto_obj, instance)
 
-    def to_representation(self, instance: models.Model):
-        """Convert a django model `instance` to binary"""
-        proto_obj = self.to_proto_representation(instance)
-        return proto_obj.SerializeToString()
-
-    def to_proto_representation(self, instance: models.Model):
-        """Convert a django model `instance` to protobuf object"""
-        proto_obj = self.proto_cls()
-        proto_obj = django_to_proto(instance, proto_obj)
-        return proto_obj
-
-    def from_proto_representation(self, proto_obj, instance):
-        """Convert protobuf object to a django model instance"""
+    def _from_proto(self, proto_obj: ProtoMsg, instance: DjModel) -> DjModel:
         try:
-            instance = proto_to_django(
-                proto_obj,
-                instance,
-                do_full_clean=getattr(self.Meta, "do_full_clean", True),
+            return proto_to_django(
+                proto_obj, instance, do_full_clean=self.do_full_clean,
             )
         except ValidationError as e:
             raise serializers.ValidationError(get_error_detail(e))
 
-        return instance
+    def to_representation(self, instance: DjModel) -> ProtoMsg:
+        proto_obj = self._to_proto(instance)
+        return proto_obj.SerializeToString()
 
-    @property
-    def proto_cls(self) -> T.Type[GeneratedProtocolMessageType]:
-        return MODEL_TO_PROTO_CLS[self.Meta.model]
+    def _to_proto(self, instance: DjModel) -> ProtoMsg:
+        proto_cls = self.get_proto_cls()
+        proto_obj = proto_cls()
+        proto_obj = django_to_proto(instance, proto_obj)
+        return proto_obj
 
+    def get_proto_cls(self) -> ProtoMsgType:
+        if self.proto_cls:
+            return self.proto_cls
+        return MODEL_TO_PROTO_CLS[self.model]
+
+    #
+    # Mostly copy-pasted from the parent class,
+    # except a few changes to allow protobuf types to work nicely
+    #
     def save(self, **kwargs):
         assert not hasattr(self, "save_object"), (
             "Serializer `%s.%s` has old-style version 2 `.save_object()` "
