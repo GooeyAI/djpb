@@ -12,6 +12,7 @@ from django.db.models.fields.related_descriptors import (
     ForeignKeyDeferredAttribute,
 )
 
+from .stubs import DjField, DjFieldType, DjModelType
 from .util import get_django_field_repr, build_django_field_map, disjoint
 
 PROTO_TIMESTAMP_TYPE = "google.protobuf.Timestamp"
@@ -66,11 +67,11 @@ SCALAR_FIELD_TYPES = {
     "bytes",
 }
 
-ProtoFields = typing.Dict[str, typing.Tuple[models.Field, str]]
-ProtoModels = typing.Dict[typing.Type[models.Model], ProtoFields]
+ProtoFields = typing.Dict[str, typing.Tuple[DjField, str]]
+ProtoModels = typing.Dict[DjFieldType, ProtoFields]
 
 
-def gen_proto_for_models(dj_models: typing.Iterable[typing.Type[models.Model]]):
+def gen_proto_for_models(dj_models: typing.Iterable[DjModelType]):
     proto_models: ProtoModels = {}
     imports = set()
 
@@ -116,7 +117,7 @@ def gen_proto_for_models(dj_models: typing.Iterable[typing.Type[models.Model]]):
     return body
 
 
-def _gen_proto_for_model(model: typing.Type[models.Model], proto_models: ProtoModels):
+def _gen_proto_for_model(model: DjModelType, proto_models: ProtoModels):
     if model in proto_models:
         return
     proto_models[model] = {}
@@ -167,8 +168,8 @@ def _gen_proto_for_model(model: typing.Type[models.Model], proto_models: ProtoMo
 
 
 def _resolve_proto_type(
-    field_name: str, field, model: typing.Type[models.Model], proto_models: ProtoModels
-) -> typing.Tuple[models.Field, str]:
+    field_name: str, field, model: DjModelType, proto_models: ProtoModels
+) -> typing.Tuple[DjField, str]:
     field_type = type(field)
 
     proto_meta = getattr(model, "ProtoMeta", None)
@@ -204,9 +205,7 @@ def _resolve_proto_type(
 
 
 def _proto_type_for_field(
-    field_name: str,
-    field_type: typing.Type[models.Field],
-    model: typing.Type[models.Model],
+    field_name: str, field_type: DjFieldType, model: DjModelType,
 ) -> str:
     # walk down the MRO to resolve the field type
     proto_type = None
