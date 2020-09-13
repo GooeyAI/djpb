@@ -31,6 +31,7 @@ DJANGO_TO_PROTO_FIELD_TYPE = {
     models.CharField: "string",
     models.IntegerField: "int32",
     models.BooleanField: "bool",
+    models.FloatField: "double",
 }
 
 RELATED_FIELD_TYPES = [
