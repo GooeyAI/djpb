@@ -1,11 +1,11 @@
 import inspect
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import models
 
 from djpb.registry import MODEL_TO_PROTO_CLS
 from djpb.serializers import SERIALIZERS, DEFAULT_SERIALIZER
 from djpb.signals import pre_django_to_proto, post_django_to_proto
+from djpb.stubs import DjModel, ProtoMsg
 from djpb.util import (
     build_django_field_map,
     resolve_django_field_type,
@@ -13,7 +13,13 @@ from djpb.util import (
 )
 
 
-def django_to_proto(django_obj: models.Model, proto_obj=None):
+def django_to_proto_bytes(django_obj: DjModel, proto_obj: ProtoMsg = None) -> bytes:
+    proto_obj = django_to_proto(django_obj, proto_obj)
+    proto_bytes = proto_obj.SerializeToString()
+    return proto_bytes
+
+
+def django_to_proto(django_obj: DjModel, proto_obj: ProtoMsg = None) -> ProtoMsg:
     django_model = type(django_obj)
 
     if proto_obj is None:
@@ -101,9 +107,3 @@ def django_to_proto(django_obj: models.Model, proto_obj=None):
     post_django_to_proto.send(django_model, proto_obj=proto_obj, django_obj=django_obj)
 
     return proto_obj
-
-
-def django_to_proto_bytes(django_obj, proto_obj=None) -> bytes:
-    proto_obj = django_to_proto(django_obj, proto_obj)
-    proto_bytes = proto_obj.SerializeToString()
-    return proto_bytes
