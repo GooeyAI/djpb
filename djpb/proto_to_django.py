@@ -1,6 +1,4 @@
-import typing as T
-
-from django.db import models, transaction
+from django.db import transaction
 
 from djpb.django_to_proto import SERIALIZERS, DEFAULT_SERIALIZER
 from djpb.registry import PROTO_CLS_TO_MODEL, MODEL_TO_PROTO_CLS
@@ -11,10 +9,12 @@ from djpb.util import (
     get_django_field_repr,
 )
 from .signals import post_proto_to_django, pre_proto_to_django
-from .stubs import ProtoMsg
+from .stubs import ProtoMsg, DjModel, DjModelType
 
 
-def proto_to_django(proto_obj: ProtoMsg, django_obj=None, *, do_full_clean=False):
+def proto_to_django(
+    proto_obj: ProtoMsg, django_obj: DjModel = None, *, do_full_clean=False
+):
     node = _proto_to_django(proto_obj, django_obj)
     with transaction.atomic():
         node.save(do_full_clean)
@@ -22,7 +22,7 @@ def proto_to_django(proto_obj: ProtoMsg, django_obj=None, *, do_full_clean=False
     return django_obj
 
 
-def _proto_to_django(proto_obj: ProtoMsg, django_obj=None) -> SaveNode:
+def _proto_to_django(proto_obj: ProtoMsg, django_obj: DjModel = None) -> SaveNode:
     proto_fields = {x.name: x for x in proto_obj.DESCRIPTOR.fields}
 
     if django_obj is None:
@@ -99,17 +99,17 @@ def _proto_to_django(proto_obj: ProtoMsg, django_obj=None) -> SaveNode:
 
 def proto_bytes_to_django(
     proto_bytes: bytes,
-    django_model: T.Type[models.Model],
-    django_obj: models.Model = None,
+    django_model: DjModelType,
+    django_obj: DjModel = None,
     *,
     do_full_clean=False,
-) -> models.Model:
+) -> DjModel:
     proto_obj = proto_bytes_to_proto(proto_bytes, django_model)
     django_obj = proto_to_django(proto_obj, django_obj, do_full_clean=do_full_clean)
     return django_obj
 
 
-def proto_bytes_to_proto(proto_bytes: bytes, django_model: T.Type[models.Model]):
+def proto_bytes_to_proto(proto_bytes: bytes, django_model: DjModel) -> ProtoMsg:
     proto_cls = MODEL_TO_PROTO_CLS[django_model]
     proto_obj = proto_cls()
     proto_obj.MergeFromString(proto_bytes)
