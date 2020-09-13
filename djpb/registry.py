@@ -1,8 +1,10 @@
+from djpb.stubs import DjModelType
+
 MODEL_TO_PROTO_CLS = {}
 PROTO_CLS_TO_MODEL = {}
 
 
-def register_model(django_model):
+def register_model(django_model: DjModelType):
     try:
         proto_cls = django_model.ProtoMeta.cls
     except AttributeError:
