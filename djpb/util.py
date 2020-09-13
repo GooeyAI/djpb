@@ -1,13 +1,14 @@
 import typing
+from mailbox import Message
 
-from django.db import models
 from django.db.models.fields.related_descriptors import ForeignKeyDeferredAttribute
-from google.protobuf.message import Message
 
-DjangoFieldMap = typing.Dict[str, models.Field]
+from djpb.stubs import DjModel, DjField, DjModelType, DjFieldType, ProtoMsg
+
+DjangoFieldMap = typing.Dict[str, DjField]
 
 
-def build_django_field_map(django_obj) -> DjangoFieldMap:
+def build_django_field_map(django_obj: DjModel) -> DjangoFieldMap:
     options = django_obj._meta
     fields = options.fields + options.many_to_many
     field_map = {f.name: f for f in fields}
@@ -15,8 +16,8 @@ def build_django_field_map(django_obj) -> DjangoFieldMap:
 
 
 def resolve_django_field_type(
-    django_model: typing.Type[models.Model], field_map: DjangoFieldMap, field_name: str
-) -> typing.Type[models.Field]:
+    django_model: DjModelType, field_map: DjangoFieldMap, field_name: str
+) -> DjFieldType:
     django_field = None
     try:
         django_field = field_map[field_name]
@@ -41,9 +42,7 @@ def resolve_django_field_type(
 
 
 def get_django_field_repr(
-    django_field_type: typing.Type[models.Field],
-    django_model: typing.Type[models.Model],
-    field_name: str,
+    django_field_type: DjFieldType, django_model: DjModelType, field_name: str,
 ) -> str:
     return f"field '{django_model.__qualname__}.{field_name}' of type {django_field_type.__qualname__!r}"
 
@@ -52,7 +51,7 @@ def disjoint(x, y):
     return set(x).isdisjoint(y)
 
 
-def create_proto_field_obj(proto_obj: Message, field_name: str) -> Message:
+def create_proto_field_obj(proto_obj: ProtoMsg, field_name: str) -> ProtoMsg:
     fields = {field.name: field for field in proto_obj.DESCRIPTOR.fields}
     field = fields[field_name]
     return field.message_type._concrete_class()

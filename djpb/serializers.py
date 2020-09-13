@@ -8,15 +8,15 @@ from django.db import models
 from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
 from django.utils import timezone
 from google.protobuf.json_format import MessageToDict, ParseDict
-from google.protobuf.message import Message
 from google.protobuf.struct_pb2 import Value
 
+from djpb.util import get_django_field_repr, create_proto_field_obj
 from .gen_proto import (
     DJANGO_TO_PROTO_FIELD_TYPE,
     PROTO_VALUE_TYPE,
     PROTO_TIMESTAMP_TYPE,
 )
-from djpb.util import get_django_field_repr, create_proto_field_obj
+from .stubs import DjModel, ProtoMsg, DjFieldType
 
 
 def register_serializer(cls: T.Type["FieldSerializer"]) -> T.Type["FieldSerializer"]:
@@ -40,10 +40,10 @@ class FieldSerializer:
     and register themselves using the @register_serializer decorator.
     """
 
-    field_types: T.Iterable[T.Type[models.Field]]
+    field_types: T.Iterable[DjFieldType]
     proto_type_name: str
 
-    def update_proto(self, proto_obj: Message, field_name: str, value):
+    def update_proto(self, proto_obj: ProtoMsg, field_name: str, value):
         setattr(proto_obj, field_name, value)
 
     def update_django(self, node: "SaveNode", field_name: str, value):
@@ -51,7 +51,7 @@ class FieldSerializer:
 
 
 DEFAULT_SERIALIZER = FieldSerializer()
-SERIALIZERS: T.Dict[T.Type[models.Field], FieldSerializer] = {}
+SERIALIZERS: T.Dict[DjFieldType, FieldSerializer] = {}
 
 
 @register_serializer
@@ -151,7 +151,7 @@ class DeferredSerializer(FieldSerializer):
 
     def save(
         self,
-        django_obj: models.Model,
+        django_obj: DjModel,
         field_name: str,
         child_node: "SaveNode",
         do_full_clean: bool,
@@ -249,7 +249,7 @@ class SaveNodeChild(T.NamedTuple):
 
 @dataclass
 class SaveNode:
-    django_obj: models.Model
+    django_obj: DjModel
 
     def __post_init__(self):
         self._children: T.Set[SaveNodeChild] = set()
