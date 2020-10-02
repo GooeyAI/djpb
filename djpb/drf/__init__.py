@@ -1,3 +1,3 @@
-from .parsers import MsgpackPackParser
+from .parsers import MsgpackParser
 from .renderers import MsgpackRenderer
 from .serializers import ProtobufSerializer
