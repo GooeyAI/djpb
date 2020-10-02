@@ -8,11 +8,6 @@ from djpb.proto_to_django import (
 from djpb.registry import register_model
 from .custom_field import CustomField, ReadOnlyField
 
-try:
-    from djpb.rest_framework_serializer import (
-        RestFrameworkSerializer,
-        MessagePackParser,
-        MessagePackRenderer,
-    )
-except ImportError:
-    pass
+from .drf.parsers import MsgpackPackParser
+from .drf.renderers import MsgpackRenderer
+from .drf.serializers import DrfSerializer

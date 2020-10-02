@@ -1,39 +1,14 @@
-import msgpack
 from django.core.exceptions import ValidationError
-from msgpack import UnpackException
 from rest_framework import serializers
-from rest_framework.exceptions import ParseError
 from rest_framework.fields import get_error_detail
-from rest_framework.parsers import BaseParser
-from rest_framework.renderers import BaseRenderer
 
-from .django_to_proto import django_to_proto
-from .proto_to_django import proto_to_django
-from .registry import MODEL_TO_PROTO_CLS
-from .stubs import DjModelType, ProtoMsgType, DjModel, ProtoMsg
+from ..django_to_proto import django_to_proto
+from ..proto_to_django import proto_to_django
+from ..registry import MODEL_TO_PROTO_CLS
+from ..stubs import DjModelType, ProtoMsgType, DjModel, ProtoMsg
 
 
-class MessagePackRenderer(BaseRenderer):
-    media_type = "application/msgpack"
-    format = "msgpack"
-    render_style = "binary"
-    charset = None
-
-    def render(self, data, media_type=None, renderer_context=None):
-        return msgpack.packb(data, use_bin_type=True)
-
-
-class MessagePackParser(BaseParser):
-    media_type = "application/msgpack"
-
-    def parse(self, stream, media_type=None, parser_context=None):
-        try:
-            return msgpack.load(stream)
-        except UnpackException as e:
-            raise ParseError(f"MessagePack parse error - {e!r}") from e
-
-
-class RestFrameworkSerializer(serializers.BaseSerializer):
+class DrfSerializer(serializers.BaseSerializer):
     model: DjModelType
     proto_cls: ProtoMsgType = None
     do_full_clean: bool = True
@@ -45,14 +20,14 @@ class RestFrameworkSerializer(serializers.BaseSerializer):
         proto_cls: ProtoMsgType = None,
         do_full_clean: bool = True,
     ):
-        class RestFrameworkSerializerForModel(RestFrameworkSerializer):
+        class DrfSerializerForModel(DrfSerializer):
             pass
 
-        RestFrameworkSerializerForModel.model = model
-        RestFrameworkSerializerForModel.proto_cls = proto_cls
-        RestFrameworkSerializerForModel.do_full_clean = do_full_clean
+        DrfSerializerForModel.model = model
+        DrfSerializerForModel.proto_cls = proto_cls
+        DrfSerializerForModel.do_full_clean = do_full_clean
 
-        return RestFrameworkSerializerForModel
+        return DrfSerializerForModel
 
     def to_internal_value(self, data):
         return data
