@@ -3,7 +3,6 @@ import uuid
 from dataclasses import dataclass
 
 from django.conf import settings
-from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models.fields.related_descriptors import ReverseManyToOneDescriptor
 from django.utils import timezone
@@ -120,7 +119,7 @@ class FileFieldSerializer(FieldSerializer):
 
 @register_serializer
 class JSONFieldSerializer(FieldSerializer):
-    field_types = (JSONField,)
+    field_types = (models.JSONField,)
     proto_type_name = PROTO_VALUE_TYPE
 
     def update_proto(self, proto_obj, field_name, value):
