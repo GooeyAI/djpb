@@ -8,7 +8,7 @@ from ..registry import MODEL_TO_PROTO_CLS
 from ..stubs import DjModelType, ProtoMsgType, DjModel, ProtoMsg
 
 
-class DrfSerializer(serializers.BaseSerializer):
+class ProtobufSerializer(serializers.BaseSerializer):
     model: DjModelType
     proto_cls: ProtoMsgType = None
     do_full_clean: bool = True
@@ -20,14 +20,14 @@ class DrfSerializer(serializers.BaseSerializer):
         proto_cls: ProtoMsgType = None,
         do_full_clean: bool = True,
     ):
-        class DrfSerializerForModel(DrfSerializer):
+        class ProtobufSerializerForModel(ProtobufSerializer):
             pass
 
-        DrfSerializerForModel.model = model
-        DrfSerializerForModel.proto_cls = proto_cls
-        DrfSerializerForModel.do_full_clean = do_full_clean
+        ProtobufSerializerForModel.model = model
+        ProtobufSerializerForModel.proto_cls = proto_cls
+        ProtobufSerializerForModel.do_full_clean = do_full_clean
 
-        return DrfSerializerForModel
+        return ProtobufSerializerForModel
 
     def to_internal_value(self, data):
         return data

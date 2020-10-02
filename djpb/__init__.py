@@ -7,7 +7,3 @@ from djpb.proto_to_django import (
 )
 from djpb.registry import register_model
 from .custom_field import CustomField, ReadOnlyField
-
-from .drf.parsers import MsgpackPackParser
-from .drf.renderers import MsgpackRenderer
-from .drf.serializers import DrfSerializer
