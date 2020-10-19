@@ -61,7 +61,12 @@ class ProtobufSerializer(serializers.BaseSerializer):
     def get_proto_cls(self) -> ProtoMsgType:
         if self.proto_cls:
             return self.proto_cls
-        return MODEL_TO_PROTO_CLS[self.model]
+        try:
+            return MODEL_TO_PROTO_CLS[self.model][0]
+        except IndexError:
+            raise ValueError(
+                f"Please specify at least one protobuf class for the model {self.model.__qualname__!r}."
+            )
 
     #
     # Mostly copy-pasted from the parent class,

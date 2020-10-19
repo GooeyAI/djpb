@@ -23,10 +23,11 @@ def django_to_proto(django_obj: DjModel, proto_obj: ProtoMsg = None) -> ProtoMsg
     django_model = type(django_obj)
 
     if proto_obj is None:
-        proto_cls = MODEL_TO_PROTO_CLS[django_model]
-        if proto_cls is None:
+        try:
+            proto_cls = MODEL_TO_PROTO_CLS[django_model][0]
+        except IndexError:
             raise ValueError(
-                f"Please specify the protobuf class for the model {django_model.__qualname__!r}."
+                f"Please specify at least one protobuf class for the model {django_model.__qualname__!r}."
             )
         proto_obj = proto_cls()
 

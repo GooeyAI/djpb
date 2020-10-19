@@ -95,22 +95,3 @@ def _proto_to_django(proto_obj: ProtoMsg, django_obj: DjModel = None) -> SaveNod
     post_proto_to_django.send(django_model, proto_obj=proto_obj, django_obj=django_obj)
 
     return node
-
-
-def proto_bytes_to_django(
-    proto_bytes: bytes,
-    django_model: DjModelType,
-    django_obj: DjModel = None,
-    *,
-    do_full_clean=False,
-) -> DjModel:
-    proto_obj = proto_bytes_to_proto(proto_bytes, django_model)
-    django_obj = proto_to_django(proto_obj, django_obj, do_full_clean=do_full_clean)
-    return django_obj
-
-
-def proto_bytes_to_proto(proto_bytes: bytes, django_model: DjModel) -> ProtoMsg:
-    proto_cls = MODEL_TO_PROTO_CLS[django_model]
-    proto_obj = proto_cls()
-    proto_obj.MergeFromString(proto_bytes)
-    return proto_obj

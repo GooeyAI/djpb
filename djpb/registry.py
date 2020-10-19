@@ -1,18 +1,22 @@
-from djpb.stubs import DjModelType
+import typing
+from collections import defaultdict
 
-MODEL_TO_PROTO_CLS = {}
-PROTO_CLS_TO_MODEL = {}
+from djpb.stubs import DjModelType, ProtoMsgType
+
+MODEL_TO_PROTO_CLS: typing.DefaultDict[
+    DjModelType, typing.List[ProtoMsgType]
+] = defaultdict(lambda: [])
+
+PROTO_CLS_TO_MODEL: typing.Dict[ProtoMsgType, DjModelType] = {}
 
 
-def register_model(django_model: DjModelType):
-    try:
-        proto_cls = django_model.ProtoMeta.cls
-    except AttributeError:
-        proto_cls = None
+def register_model(proto_classes: typing.List[ProtoMsgType]):
+    def decorator(django_model: DjModelType):
+        MODEL_TO_PROTO_CLS[django_model] = proto_classes
 
-    MODEL_TO_PROTO_CLS[django_model] = proto_cls
+        for proto_class in proto_classes:
+            PROTO_CLS_TO_MODEL[proto_class] = django_model
 
-    if proto_cls is not None:
-        PROTO_CLS_TO_MODEL[proto_cls] = django_model
+        return django_model
 
-    return django_model
+    return decorator
