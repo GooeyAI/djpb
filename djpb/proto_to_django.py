@@ -61,6 +61,8 @@ def _proto_to_django(proto_obj: ProtoMsg, django_obj: DjModel = None) -> SaveNod
             unset = False
 
         if unset:
+            if field_map[field_name].null:
+                setattr(django_obj, field_name, None)
             # leave "unset" fields as-is
             continue
 
