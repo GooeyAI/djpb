@@ -142,11 +142,19 @@ class DeferredSerializer(FieldSerializer):
             rel_pb_objs = [value]
 
         field = getattr(node.django_obj, field_name)
-        field.all().delete()
+
+        to_keep = []
 
         for pb_obj in rel_pb_objs:
-            child_node = _proto_to_django(pb_obj)
+            if hasattr(pb_obj, "id") and pb_obj.id:
+                dj_obj = field.all().get(id=pb_obj.id)
+                to_keep.append(pb_obj.id)
+            else:
+                dj_obj = None
+            child_node = _proto_to_django(pb_obj, dj_obj)
             node.add_child(SaveNodeChild(self, field_name, child_node))
+
+        field.all().exclude(id__in=to_keep).delete()
 
     def save(
         self,
