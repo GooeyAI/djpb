@@ -133,28 +133,34 @@ class JSONFieldSerializer(FieldSerializer):
 
 
 class DeferredSerializer(FieldSerializer):
+    is_many = False
+
     def update_django(self, node, field_name, value):
         from djpb.proto_to_django import _proto_to_django
 
-        try:
+        if self.is_many:
             rel_pb_objs = list(value)
-        except TypeError:
+        else:
             rel_pb_objs = [value]
 
-        field = getattr(node.django_obj, field_name)
+        if self.is_many and node.django_obj.id:
+            rel_objs = getattr(node.django_obj, field_name).all()
+        else:
+            rel_objs = None
 
         to_keep = []
 
         for pb_obj in rel_pb_objs:
-            if hasattr(pb_obj, "id") and pb_obj.id:
-                dj_obj = field.all().get(id=pb_obj.id)
+            if rel_objs and hasattr(pb_obj, "id") and pb_obj.id:
+                dj_obj = rel_objs.get(id=pb_obj.id)
                 to_keep.append(pb_obj.id)
             else:
                 dj_obj = None
             child_node = _proto_to_django(pb_obj, dj_obj)
             node.add_child(SaveNodeChild(self, field_name, child_node))
 
-        field.all().exclude(id__in=to_keep).delete()
+        if rel_objs:
+            rel_objs.exclude(id__in=to_keep).delete()
 
     def save(
         self,
@@ -192,6 +198,8 @@ class OneToXSerializer(DeferredSerializer):
 
 
 class ManyToXSerializer(DeferredSerializer):
+    is_many = True
+
     def update_proto(self, proto_obj, field_name, value):
         from djpb import django_to_proto
 
