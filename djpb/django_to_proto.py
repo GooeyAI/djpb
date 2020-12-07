@@ -50,6 +50,10 @@ def django_to_proto(django_obj: DjModel, proto_obj: ProtoMsg = None) -> ProtoMsg
             field.update_proto(django_obj, proto_obj, field_name)
             continue
 
+        # handle set_null
+        if field_name.endswith("__set_null"):
+            continue
+
         django_field_type = resolve_django_field_type(
             django_model, field_map, field_name
         )

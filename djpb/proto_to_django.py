@@ -73,6 +73,12 @@ def _proto_to_django(proto_obj: ProtoMsg, django_obj: DjModel = None) -> SaveNod
             field.update_django(node, proto_obj, field_name)
             continue
 
+        # handle set_null
+        if field_name.endswith("__set_null"):
+            field_name = field_name[: -len("__set_null")]
+            setattr(django_obj, field_name, None)
+            continue
+
         django_field_type = resolve_django_field_type(
             django_model, field_map, field_name
         )
