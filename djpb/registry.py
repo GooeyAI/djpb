@@ -34,7 +34,7 @@ class ProtoMeta:
         self.enums = enums
 
 
-PROTO_META: typing.Dict[DjModelType, ProtoMeta] = {}
+PROTO_META: typing.DefaultDict[DjModelType, ProtoMeta] = defaultdict(ProtoMeta)
 
 
 def register_model(
@@ -42,7 +42,8 @@ def register_model(
 ):
     def decorator(django_model: DjModelType):
         MODEL_TO_PROTO_CLS[django_model] = proto_classes
-        PROTO_META[django_model] = proto_meta or ProtoMeta()
+        if proto_meta:
+            PROTO_META[django_model] = proto_meta
         for proto_class in proto_classes:
             PROTO_CLS_TO_MODEL[proto_class] = django_model
 
