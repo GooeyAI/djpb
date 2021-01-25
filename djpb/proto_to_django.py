@@ -1,7 +1,7 @@
 from django.db import transaction
 
 from djpb.django_to_proto import SERIALIZERS, DEFAULT_SERIALIZER
-from djpb.registry import PROTO_CLS_TO_MODEL, MODEL_TO_PROTO_CLS
+from djpb.registry import PROTO_CLS_TO_MODEL, MODEL_TO_PROTO_CLS, PROTO_META
 from djpb.serializers import FieldSerializer, SaveNode
 from djpb.util import (
     build_django_field_map,
@@ -48,8 +48,8 @@ def _proto_to_django(proto_obj: ProtoMsg, django_obj: DjModel = None) -> SaveNod
     field_map = build_django_field_map(django_obj)
     node = SaveNode(django_obj)
 
-    proto_meta = getattr(django_model, "ProtoMeta", None)
-    custom = getattr(proto_meta, "custom", {})
+    proto_meta = PROTO_META[django_model]
+    custom = proto_meta.custom
 
     pre_proto_to_django.send(django_model, proto_obj=proto_obj, django_obj=django_obj)
 

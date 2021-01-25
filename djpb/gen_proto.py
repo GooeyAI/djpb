@@ -12,6 +12,7 @@ from django.db.models.fields.related_descriptors import (
     ForeignKeyDeferredAttribute,
 )
 
+from .registry import PROTO_META
 from .stubs import DjField, DjFieldType, DjModelType
 from .util import get_django_field_repr, build_django_field_map, disjoint
 
@@ -122,33 +123,33 @@ def _gen_proto_for_model(model: DjModelType, proto_models: ProtoModels):
         return
     proto_models[model] = {}
 
-    proto_meta = getattr(model, "ProtoMeta", None)
-    exclude = getattr(proto_meta, "exclude", ())
-    extra = getattr(proto_meta, "extra", ())
-    fields = getattr(proto_meta, "fields", None)
+    proto_meta = PROTO_META[model]
 
     field_map = build_django_field_map(model)
 
-    if fields:
+    if proto_meta.fields:
         assert not (
-            exclude or extra
+            proto_meta.exclude or proto_meta.extra
         ), "'exclude' and 'extra' are not allowed if 'fields' is specified.."
 
         field_map = {
-            name: field_map.get(name) or getattr(model, name) for name in fields
+            name: field_map.get(name) or getattr(model, name)
+            for name in proto_meta.fields
         }
     else:
-        assert disjoint(exclude, extra), "'exclude' and 'extra' must be disjoint sets."
+        assert disjoint(
+            proto_meta.exclude, proto_meta.extra
+        ), "'exclude' and 'extra' must be disjoint sets."
 
         # exclude the primary key by default
         pk_name = model._meta.pk.name
-        if pk_name not in extra:
+        if pk_name not in proto_meta.extra:
             del field_map[pk_name]
 
-        for name in exclude:
+        for name in proto_meta.exclude:
             del field_map[name]
 
-        for name in extra:
+        for name in proto_meta.extra:
             if name in field_map:
                 continue
             field_map[name] = getattr(model, name)
@@ -172,11 +173,10 @@ def _resolve_proto_type(
 ) -> typing.Tuple[DjField, str]:
     field_type = type(field)
 
-    proto_meta = getattr(model, "ProtoMeta", None)
-    enums = getattr(proto_meta, "enums", {})
+    proto_meta = PROTO_META[model]
 
-    if field_name in enums:
-        enum_cls = enums[field_name]
+    if field_name in proto_meta.enums:
+        enum_cls = proto_meta.enums[field_name]
         enum_clsname = enum_cls.DESCRIPTOR.name
         return field, enum_clsname
 

@@ -2,7 +2,7 @@ import inspect
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from djpb.registry import MODEL_TO_PROTO_CLS
+from djpb.registry import MODEL_TO_PROTO_CLS, PROTO_META, ProtoMeta
 from djpb.serializers import SERIALIZERS, DEFAULT_SERIALIZER
 from djpb.signals import pre_django_to_proto, post_django_to_proto
 from djpb.stubs import DjModel, ProtoMsg
@@ -19,7 +19,9 @@ def django_to_proto_bytes(django_obj: DjModel, proto_obj: ProtoMsg = None) -> by
     return proto_bytes
 
 
-def django_to_proto(django_obj: DjModel, proto_obj: ProtoMsg = None) -> ProtoMsg:
+def django_to_proto(
+    django_obj: DjModel, proto_obj: ProtoMsg = None, *, proto_meta: ProtoMeta = None
+) -> ProtoMsg:
     django_model = type(django_obj)
 
     if proto_obj is None:
@@ -33,8 +35,8 @@ def django_to_proto(django_obj: DjModel, proto_obj: ProtoMsg = None) -> ProtoMsg
 
     field_map = build_django_field_map(django_obj)
 
-    proto_meta = getattr(django_model, "ProtoMeta", None)
-    custom = getattr(proto_meta, "custom", {})
+    proto_meta = proto_meta or PROTO_META[django_model]
+    custom = proto_meta.custom
 
     pre_django_to_proto.send(django_model, proto_obj=proto_obj, django_obj=django_obj)
 

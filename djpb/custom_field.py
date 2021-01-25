@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import typing
 
-from . import django_to_proto
+from .django_to_proto import django_to_proto
 from .serializers import SaveNode
 from .stubs import DjModel, ProtoMsg
 from .util import create_proto_field_obj
