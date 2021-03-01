@@ -1,6 +1,5 @@
-from dataclasses import dataclass
-
 import typing
+from dataclasses import dataclass
 
 from .django_to_proto import django_to_proto
 from .serializers import SaveNode
@@ -21,25 +20,38 @@ class CustomField:
 
 
 @dataclass
-class ReadOnlyField(CustomField):
+class ReadOnlyQueryStrField(CustomField):
     query: str = None
+
+    def update_proto(self, django_obj, proto_obj, field_name):
+        model = type(django_obj)
+        value = (
+            model.objects.filter(pk=django_obj.pk)
+            .values_list(self.query or field_name, flat=True)
+            .first()
+        )
+        if value is None:
+            return
+        setattr(proto_obj, field_name, value)
+
+
+@dataclass
+class ReadOnlyQuerySetField(CustomField):
     get_queryset: typing.Callable = None
 
     def update_proto(self, django_obj, proto_obj, field_name):
-        if self.get_queryset:
-            field = getattr(proto_obj, field_name)
-            msgs = [
-                django_to_proto(obj, create_proto_field_obj(proto_obj, field_name))
-                for obj in self.get_queryset(django_obj)
-            ]
-            field.extend(msgs)
-        else:
-            model = type(django_obj)
-            value = (
-                model.objects.filter(pk=django_obj.pk)
-                .values_list(self.query or field_name, flat=True)
-                .first()
-            )
-            if value is None:
-                return
-            setattr(proto_obj, field_name, value)
+        field = getattr(proto_obj, field_name)
+        msgs = [
+            django_to_proto(obj, create_proto_field_obj(proto_obj, field_name))
+            for obj in self.get_queryset(django_obj)
+        ]
+        field.extend(msgs)
+
+
+@dataclass
+class ReadOnlyValueField(CustomField):
+    get_value: typing.Callable = None
+
+    def update_proto(self, django_obj, proto_obj, field_name):
+        value = self.get_value(django_obj)
+        setattr(proto_obj, field_name, value)
