@@ -54,4 +54,6 @@ class ReadOnlyValueField(CustomField):
 
     def update_proto(self, django_obj, proto_obj, field_name):
         value = self.get_value(django_obj)
+        if value is None:
+            return
         setattr(proto_obj, field_name, value)
