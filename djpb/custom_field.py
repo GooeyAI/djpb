@@ -10,7 +10,6 @@ from .util import create_proto_field_obj
 @dataclass
 class CustomField:
     proto_type: str
-    null: bool = False
 
     def update_proto(self, django_obj: DjModel, proto_obj: ProtoMsg, field_name: str):
         pass
