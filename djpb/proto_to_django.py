@@ -67,10 +67,11 @@ def _proto_to_django(proto_obj: ProtoMsg, django_obj: DjModel = None) -> SaveNod
         # handle custom fields
         try:
             field = custom[field_name]
-        except KeyError:
+            field_update_django = field.update_django
+        except (KeyError, AttributeError):
             pass
         else:
-            field.update_django(node, proto_obj, field_name)
+            field_update_django(node, proto_obj, field_name)
             continue
 
         # handle set_null

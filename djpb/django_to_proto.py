@@ -46,10 +46,11 @@ def django_to_proto(
         # handle custom fields
         try:
             field = custom[field_name]
-        except KeyError:
+            field_update_proto = field.update_proto
+        except (KeyError, AttributeError):
             pass
         else:
-            field.update_proto(django_obj, proto_obj, field_name)
+            field_update_proto(django_obj, proto_obj, field_name)
             continue
 
         # handle set_null
