@@ -127,33 +127,6 @@ def _gen_proto_for_model(model: DjModelType, proto_models: ProtoModels):
 
     field_map = build_django_field_map(model)
 
-    if proto_meta.fields:
-        assert not (
-            proto_meta.exclude or proto_meta.extra
-        ), "'exclude' and 'extra' are not allowed if 'fields' is specified.."
-
-        field_map = {
-            name: field_map.get(name) or getattr(model, name)
-            for name in proto_meta.fields
-        }
-    else:
-        assert disjoint(
-            proto_meta.exclude, proto_meta.extra
-        ), "'exclude' and 'extra' must be disjoint sets."
-
-        # exclude the primary key by default
-        pk_name = model._meta.pk.name
-        if pk_name not in proto_meta.extra:
-            del field_map[pk_name]
-
-        for name in proto_meta.exclude:
-            del field_map[name]
-
-        for name in proto_meta.extra:
-            if name in field_map:
-                continue
-            field_map[name] = getattr(model, name)
-
     proto_fields = {
         name: _resolve_proto_type(name, field, model, proto_models)
         for name, field in field_map.items()
@@ -205,7 +178,9 @@ def _resolve_proto_type(
 
 
 def _proto_type_for_field(
-    field_name: str, field_type: DjFieldType, model: DjModelType,
+    field_name: str,
+    field_type: DjFieldType,
+    model: DjModelType,
 ) -> str:
     # walk down the MRO to resolve the field type
     proto_type = None

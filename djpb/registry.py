@@ -17,9 +17,6 @@ PROTO_CLS_TO_MODEL: typing.Dict[ProtoMsgType, DjModelType] = {}
 class ProtoMeta:
     def __init__(
         self,
-        exclude: typing.Sequence[str] = (),
-        extra: typing.Sequence[str] = (),
-        fields: typing.Sequence[str] = (),
         custom: typing.Dict[str, "CustomField"] = None,
         enums: typing.Dict[str, typing.Type] = None,
     ):
@@ -27,25 +24,22 @@ class ProtoMeta:
             custom = {}
         if enums is None:
             enums = {}
-        self.exclude = exclude
-        self.extra = extra
-        self.fields = fields
         self.custom = custom
         self.enums = enums
 
 
-PROTO_META: typing.DefaultDict[DjModelType, ProtoMeta] = defaultdict(ProtoMeta)
+PROTO_META: typing.DefaultDict[ProtoMsgType, ProtoMeta] = defaultdict(ProtoMeta)
 
 
 def register_model(
     proto_classes: typing.List[ProtoMsgType], proto_meta: ProtoMeta = None
 ):
     def decorator(django_model: DjModelType):
-        MODEL_TO_PROTO_CLS[django_model] = proto_classes
-        if proto_meta:
-            PROTO_META[django_model] = proto_meta
+        MODEL_TO_PROTO_CLS[django_model] += proto_classes
         for proto_class in proto_classes:
             PROTO_CLS_TO_MODEL[proto_class] = django_model
+            if proto_meta:
+                PROTO_META[proto_class] = proto_meta
 
         return django_model
 

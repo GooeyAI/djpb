@@ -32,10 +32,12 @@ def django_to_proto(
                 f"Please specify at least one protobuf class for the model {django_model.__qualname__!r}."
             )
         proto_obj = proto_cls()
+    else:
+        proto_cls = type(proto_obj)
 
     field_map = build_django_field_map(django_obj)
 
-    proto_meta = proto_meta or PROTO_META[django_model]
+    proto_meta = proto_meta or PROTO_META[proto_cls]
     custom = proto_meta.custom
 
     pre_django_to_proto.send(django_model, proto_obj=proto_obj, django_obj=django_obj)

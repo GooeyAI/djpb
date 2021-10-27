@@ -25,8 +25,8 @@ def proto_to_django(
 def _proto_to_django(proto_obj: ProtoMsg, django_obj: DjModel = None) -> SaveNode:
     proto_fields = {x.name: x for x in proto_obj.DESCRIPTOR.fields}
 
+    proto_cls = type(proto_obj)
     if django_obj is None:
-        proto_cls = type(proto_obj)
         django_cls = PROTO_CLS_TO_MODEL[proto_cls]
 
         # try to get an existing object if it's pk is present in the proto fields
@@ -48,7 +48,7 @@ def _proto_to_django(proto_obj: ProtoMsg, django_obj: DjModel = None) -> SaveNod
     field_map = build_django_field_map(django_obj)
     node = SaveNode(django_obj)
 
-    proto_meta = PROTO_META[django_model]
+    proto_meta = PROTO_META[proto_cls]
     custom = proto_meta.custom
 
     pre_proto_to_django.send(django_model, proto_obj=proto_obj, django_obj=django_obj)
