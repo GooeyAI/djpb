@@ -104,7 +104,14 @@ def django_to_proto(
                 break
 
         try:
-            serializer.update_proto(proto_obj, field_name, value)
+            # repeated oneof support
+            if (
+                proto_field.message_type is not None
+                and proto_field.message_type.name.endswith("__oneof")
+            ):
+                serializer.update_proto(getattr(proto_obj, field_name), "value", value)
+            else:
+                serializer.update_proto(proto_obj, field_name, value)
         except Exception as e:
             django_field_repr = get_django_field_repr(
                 django_field_type, django_model, field_name

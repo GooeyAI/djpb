@@ -85,6 +85,13 @@ def _proto_to_django(proto_obj: ProtoMsg, django_obj: DjModel = None) -> SaveNod
         )
         value = getattr(proto_obj, field_name)
 
+        # repeated oneof support
+        if (
+            proto_field.message_type is not None
+            and proto_field.message_type.name.endswith("__oneof")
+        ):
+            value = value.value
+
         serializer: FieldSerializer = SERIALIZERS.get(
             django_field_type, DEFAULT_SERIALIZER
         )
