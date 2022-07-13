@@ -1,3 +1,4 @@
+import typing
 import typing as T
 import uuid
 from dataclasses import dataclass
@@ -133,35 +134,6 @@ class JSONFieldSerializer(FieldSerializer):
 
 
 class DeferredSerializer(FieldSerializer):
-    is_many = False
-
-    def update_django(self, node, field_name, value):
-        from djpb.proto_to_django import _proto_to_django
-
-        if self.is_many:
-            rel_pb_objs = list(value)
-        else:
-            rel_pb_objs = [value]
-
-        if self.is_many and node.django_obj.id:
-            rel_objs = getattr(node.django_obj, field_name).all()
-        else:
-            rel_objs = None
-
-        to_keep = []
-
-        for pb_obj in rel_pb_objs:
-            if rel_objs and hasattr(pb_obj, "id") and pb_obj.id:
-                dj_obj = rel_objs.get(id=pb_obj.id)
-                to_keep.append(pb_obj.id)
-            else:
-                dj_obj = None
-            child_node = _proto_to_django(pb_obj, dj_obj)
-            node.add_child(SaveNodeChild(self, field_name, child_node))
-
-        if rel_objs:
-            rel_objs.exclude(id__in=to_keep).delete()
-
     def save(
         self,
         django_obj: DjModel,
@@ -169,7 +141,7 @@ class DeferredSerializer(FieldSerializer):
         child_node: "SaveNode",
         do_full_clean: bool,
     ):
-        ...
+        raise NotImplementedError()
 
 
 @register_serializer
@@ -182,6 +154,12 @@ class OneToXSerializer(DeferredSerializer):
         field = getattr(proto_obj, field_name)
         value = django_to_proto(value, create_proto_field_obj(proto_obj, field_name))
         field.CopyFrom(value)
+
+    def update_django(self, node, field_name, value):
+        from djpb.proto_to_django import _proto_to_django
+
+        child_node = _proto_to_django(value)
+        node.add_child(SaveNodeChild(self, field_name, child_node))
 
     def save(self, django_obj, field_name, child_node, do_full_clean):
         # save child object
@@ -198,7 +176,40 @@ class OneToXSerializer(DeferredSerializer):
 
 
 class ManyToXSerializer(DeferredSerializer):
-    is_many = True
+    def update_django(self, node, field_name, value):
+        from djpb.proto_to_django import _proto_to_django
+
+        # get existing django objs queryset
+        if node.django_obj.id:
+            # The related model mangaer, type: django.db.models.fields.RelatedManager / ManyRelatedManager
+            rel_manager = getattr(node.django_obj, field_name)
+            # The releated models's manager, type: Manager
+            rel_model_manager = rel_manager.model.objects
+        else:
+            rel_manager = None
+            rel_model_manager = None
+
+        to_keep = []
+
+        # for each pb obj in value
+        child_nodes = []
+        for pb_obj in value:
+            # try to fetch corresponding dj obj from db
+            if rel_model_manager and hasattr(pb_obj, "id") and pb_obj.id:
+                dj_obj = rel_model_manager.get(id=pb_obj.id)
+                to_keep.append(pb_obj.id)  # dont delete this obj!
+            else:
+                dj_obj = None
+            # convert pb obj to django obj
+            child_nodes.append(_proto_to_django(pb_obj, dj_obj))
+        node.add_child(SaveNodeChild(self, field_name, tuple(child_nodes)))
+
+        # delete dj objs that are not in input pb objs
+        if rel_manager:
+            self.clean_objs(rel_manager, to_keep)
+
+    def clean_objs(self, rel_manager, obj_ids_to_keep: typing.List[int]):
+        raise NotImplementedError()
 
     def update_proto(self, proto_obj, field_name, value):
         from djpb import django_to_proto
@@ -216,41 +227,55 @@ class ManyToXSerializer(DeferredSerializer):
 class ManyToOneSerializer(ManyToXSerializer):
     field_types = (ReverseManyToOneDescriptor,)
 
-    def save(self, django_obj, field_name, child_node, do_full_clean):
+    def clean_objs(self, rel_manager, obj_ids_to_keep: typing.List[int]):
+        # delete dj objs that are no longer in use
+        rel_manager.exclude(id__in=obj_ids_to_keep).delete()
+
+    def save(self, django_obj, field_name, child_nodes, do_full_clean):
         # save parent object
         if do_full_clean:
             django_obj.full_clean()
         django_obj.save()
 
-        # get child object
-        rel_obj = child_node.django_obj
+        for child_node in child_nodes:
+            # get child object
+            rel_obj = child_node.django_obj
 
-        # set child object's field to parent object
-        rel_manager = getattr(django_obj, field_name)
-        rel_name = rel_manager.field.name
-        setattr(rel_obj, rel_name, django_obj)
+            # set child object's field to parent object
+            rel_manager = getattr(django_obj, field_name)
+            rel_name = rel_manager.field.name
+            setattr(rel_obj, rel_name, django_obj)
 
-        # save related object
-        child_node.save(do_full_clean)
+            # save child object
+            child_node.save(do_full_clean)
 
 
 @register_serializer
 class ManyToManySerializer(ManyToXSerializer):
     field_types = (models.ManyToManyField,)
 
-    def save(self, django_obj, field_name, child_node, do_full_clean):
-        # save child object
-        child_node.save(do_full_clean)
+    def clean_objs(self, rel_manager, obj_ids_to_keep: typing.List[int]):
+        # remove objs that are removed from the m2m relation
+        to_remove = rel_manager.exclude(id__in=obj_ids_to_keep).values_list(
+            "id", flat=True
+        )
+        for rel_obj_id in to_remove:
+            rel_manager.remove(rel_obj_id)
 
+    def save(self, django_obj, field_name, child_nodes, do_full_clean):
         # save parent object
         if do_full_clean:
             django_obj.full_clean()
         django_obj.save()
 
-        # add child to parent's m2m manager
-        rel_manager = getattr(django_obj, field_name)
-        rel_obj = child_node.django_obj
-        rel_manager.add(rel_obj)
+        for child_node in child_nodes:
+            # save child object
+            child_node.save(do_full_clean)
+
+            # add child to parent's m2m manager
+            rel_manager = getattr(django_obj, field_name)
+            rel_obj = child_node.django_obj
+            rel_manager.add(rel_obj)
 
 
 class SaveNodeChild(T.NamedTuple):
